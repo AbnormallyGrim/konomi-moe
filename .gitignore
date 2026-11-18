@@ -235,3 +235,6 @@ node_modules/
 # Agent skills linked from the local .venv (broken links anywhere else)
 .agents/skills/developing-with-streamlit
 .claude/skills/developing-with-streamlit
+
+# Trail: session learnings, kept locally only
+.trail/
