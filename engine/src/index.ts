@@ -1,0 +1,156 @@
+/** Public API of the recommendation engine. */
+
+export {
+  batchQuery,
+  batchVariables,
+  chunk,
+  PAGES_PER_REQUEST,
+  unbatchVariables,
+} from "./anilist/batch.ts";
+export {
+  AniListClient,
+  AniListError,
+  API_URL,
+  type ClientOptions,
+  fetchTransport,
+  type Transport,
+  type TransportResponse,
+} from "./anilist/client.ts";
+export {
+  type ListChunk,
+  type ListCollectionData,
+  type MediaNode,
+  parseListChunk,
+  parseMedia,
+  parseRecommendations,
+} from "./anilist/parse.ts";
+export * as queries from "./anilist/queries.ts";
+export {
+  type Character,
+  type DetailsNode,
+  KEY_STAFF_ROLES,
+  type Person,
+  parseDetails,
+  type StaffMember,
+  type TitleDetails,
+} from "./details.ts";
+export {
+  blocks,
+  type Exclusions,
+  excludedGenres,
+  excludedTags,
+  MAX_CHAIN,
+  type MediaLookup,
+  prequelChain,
+  sequelClosure,
+} from "./exclusions.ts";
+export {
+  blocksSeen,
+  CROSS_MEDIA,
+  type Filters,
+  FORMATS,
+  filterAccepts,
+  filterQueryVariables,
+  filtersActive,
+  listedVersions,
+  mainGenres,
+  makeFilters,
+  requiredLabels,
+  SEEN,
+  type SeenAdaptations,
+  STATUSES,
+  seenAdaptations,
+  VERSIONS,
+} from "./filters.ts";
+export {
+  exclusionLabels,
+  type ListEntry,
+  type ListStatus,
+  type Media,
+  type MediaType,
+  mediaLabels,
+  mediaLength,
+  otherType,
+  prequelIds,
+  type Relation,
+  sequelIds,
+  type Tag,
+  type Titles,
+} from "./models.ts";
+export {
+  CATEGORIES_MAX_AGE_MS,
+  FILTER_PAGES,
+  loadExclusions,
+  makeRunOptions,
+  NoSyncedList,
+  type Progress,
+  type RunOptions,
+  type RunResult,
+  run,
+  tagCategories,
+} from "./pipeline.ts";
+export {
+  buildProfile,
+  candidateSources,
+  discoveryTags,
+  HIDDEN_REASONS,
+  type Profile,
+  type RankOptions,
+  type Reason,
+  type Recommendation,
+  rank,
+  type SourceOptions,
+  UNFINISHED,
+} from "./recommend.ts";
+export { fitRidge, predictRow, type RidgeFit, type SparseRow, solveSpd } from "./ridge.ts";
+export {
+  emptyExclusions,
+  MemoryStore,
+  type MemoryStoreData,
+  type SavedExclusions,
+  type Store,
+} from "./store.ts";
+export {
+  discover,
+  discoverMany,
+  fetchMedia,
+  MEDIA_MAX_AGE_MS,
+  PAGE_SIZE,
+  PER_CHUNK,
+  type Search,
+  type SyncResult,
+  syncEntries,
+  syncList,
+} from "./sync.ts";
+export {
+  COMMUNITY_WEIGHT,
+  communityWeight,
+  DEFAULT_LABELS,
+  DEFAULT_MEAN,
+  type Example,
+  examples,
+  FULL_LIST,
+  features,
+  isLiked,
+  type Labels,
+  label,
+  MAX_COMMUNITY_WEIGHT,
+  MIN_EXAMPLES,
+  NotEnoughHistory,
+  notInterestedExamples,
+  TasteModel,
+  truth,
+  userMean,
+} from "./taste.ts";
+export {
+  GENRE_CATEGORIES,
+  GENRE_ONLY,
+  GENRE_TAGS,
+  GENRES,
+  MAIN_MIN,
+  NOT_EVIDENCE,
+  RIVALS,
+  TAG_MAIN_MIN,
+  type Theme,
+  Themes,
+} from "./themes.ts";

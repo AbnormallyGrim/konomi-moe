@@ -1,0 +1,15 @@
+{
+  "name": "@konomi/engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Recommendation engine shared by the Seanime plugin and the browser extension.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

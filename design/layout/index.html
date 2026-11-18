@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layouts (wireframes)</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  .wrap { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0 1.5rem; }
+  .grid a { text-decoration: none; color: inherit; }
+  .grid .panel:hover { border-color: var(--ink); }
+  ul { padding-left: 1.2rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>App layout wireframes</h1>
+  <p class="panel" style="margin-bottom:1rem"><b>See it styled:</b> <a href="../mock/app.html">high-fidelity mockup</a> (real-looking covers, dark and light themes, clickable). Its <b>Host</b> switch shows the same page as a browser extension tab or inside Seanime. The <a href="../mock/extension.html">extension mockup</a> has the toolbar popup and the AniList page badge.<br><span class="muted small">Plan change: the desktop app was replaced by a browser extension. The "Desktop app" wireframe below still shows the extension's full-tab layout.</span></p>
+  <p class="muted">Structure only: grey boxes, placeholder text and made-up titles. Visual design comes after the layout is agreed. Toggle the yellow notes off in each page's top bar.</p>
+
+  <div class="grid">
+    <a href="desktop.html"><div class="panel">
+      <h2>Desktop app</h2>
+      <p class="muted small">Its own window. Needs first-run setup and a Profile for linking AniList, MyAnimeList, Kitsu or Shikimori.</p>
+      <p class="small">Screens: first run · For you · Your taste · Profile (accounts, preferences, exclusions, data) · details panel. Compare a sidebar against a top bar.</p>
+    </div></a>
+    <a href="seanime.html"><div class="panel">
+      <h2>Seanime plugin</h2>
+      <p class="muted small">Lives inside Seanime, which already has the user signed in, so there's no Profile or account linking.</p>
+      <p class="small">Places: its own page · tray popover · a row on Discover · a section on each title's page.</p>
+    </div></a>
+  </div>
+
+  <h2>Decisions these wireframes raise</h2>
+  <ul>
+    <li><b>Desktop navigation:</b> sidebar or top bar?</li>
+    <li><b>Details:</b> side panel (grid stays visible) or centred window (today's prototype)? In the plugin, maybe Seanime's own title page instead.</li>
+    <li><b>Accounts:</b> one "list source" account at a time, or merge several?</li>
+    <li><b>Not interested vs Exclude:</b> "Not interested" also teaches the model a dislike; "Exclude" only hides.</li>
+    <li><b>Plugin extras:</b> are the Discover row and the title-page fit verdict worth it, or just the page and tray?</li>
+  </ul>
+</div>
+</body>
+</html>

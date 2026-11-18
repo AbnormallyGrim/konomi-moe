@@ -1,0 +1,25 @@
+{
+  "name": "konomi-moe",
+  "private": true,
+  "description": "Local anime and manga recommendations. npm workspaces for the TypeScript parts; the Python lab is in lab/.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "engine",
+    "ui",
+    "seanime"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "biome check . && npm run typecheck --workspaces && npm test --workspaces",
+    "format": "biome check --write .",
+    "test": "npm test --workspaces"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
