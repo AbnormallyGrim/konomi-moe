@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App mockup</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  /* Shell */
+  .shell { display: grid; grid-template-columns: 236px 1fr; min-height: calc(100vh - 38px); }
+  .shell.top { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .side { position: sticky; top: 38px; height: calc(100vh - 38px); display: flex; flex-direction: column; gap: .25rem; padding: 1.1rem .85rem; background: var(--surface); border-right: 1px solid var(--line); }
+  .shell.top .side { position: sticky; top: 38px; z-index: 20; height: auto; flex-direction: row; align-items: center; padding: .6rem 1.2rem; border-right: 0; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: .6rem; font-weight: 800; font-size: 1.05rem; padding: .2rem .5rem 1rem; }
+  .shell.top .brand { padding: 0 1.2rem 0 0; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; border: 2px dashed var(--faint); background: var(--surface-2); } /* placeholder until branding is decided */
+  .nav { display: flex; align-items: center; gap: .65rem; padding: .55rem .7rem; border-radius: 10px; color: var(--muted); cursor: pointer; font-weight: 600; transition: background .15s, color .15s; }
+  .nav:hover { background: var(--surface-2); color: var(--text); }
+  .nav.on { background: var(--accent-soft); color: var(--accent); }
+  .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: .6rem; }
+  .shell.top .side-foot { margin: 0 0 0 auto; flex-direction: row; align-items: center; }
+  .me { display: flex; align-items: center; gap: .6rem; padding: .55rem .6rem; border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: linear-gradient(135deg, #3aa7ff, #6a5cff); flex: none; }
+  .me small { display: block; color: var(--muted); font-size: .72rem; line-height: 1.2; }
+  .shell.top .me small { display: none; }
+  .shell.top .nav-profile { display: none; }
+  .sync { display: flex; align-items: center; gap: .45rem; font-size: .75rem; color: var(--muted); padding: 0 .6rem; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px rgba(74, 222, 128, .15); }
+
+  main { padding: 1.6rem 2rem 3rem; min-width: 0; }
+  .view { display: none; animation: fade .2s ease; } .view.on { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } }
+  .head { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.1rem; }
+  .head h1 { font-size: 1.75rem; font-weight: 800; }
+  .head .sub { color: var(--muted); font-size: .85rem; margin-top: .15rem; }
+  .head .tools { margin-left: auto; display: flex; gap: .55rem; align-items: center; }
+
+  /* Filters */
+  .chips { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.1rem; }
+  .filters { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; margin-bottom: .2rem; }
+  .filters.open { grid-template-rows: 1fr; margin-bottom: 1.2rem; }
+  .filters > div { overflow: hidden; }
+  .filter-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.2rem; display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.2rem 2rem; }
+  .filter-card .pills { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .toggles { display: grid; gap: .65rem; }
+  .toggle { display: flex; align-items: center; gap: .7rem; }
+  .filter-foot { grid-column: 1 / -1; display: flex; gap: .5rem; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: .9rem; }
+
+  /* Cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.2rem; }
+  .card { position: relative; cursor: pointer; border-radius: var(--radius); }
+  .card .cv { position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius); overflow: hidden; background: var(--surface-2); box-shadow: 0 6px 16px rgba(0, 0, 0, .25); transition: transform .2s, box-shadow .2s; }
+  .card .cv img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card:hover .cv { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(0, 0, 0, .4); }
+  .card .cv::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgba(0, 0, 0, .75)); }
+  .rank { position: absolute; top: .55rem; left: .55rem; z-index: 1; min-width: 30px; height: 26px; padding: 0 .5rem; display: grid; place-items: center; border-radius: 8px; background: rgba(10, 12, 18, .78); backdrop-filter: blur(6px); color: #fff; font-weight: 800; font-size: .85rem; }
+  .rank.top3 { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .score { position: absolute; left: .6rem; bottom: .55rem; z-index: 1; display: flex; align-items: center; gap: .3rem; color: #fff; font-weight: 700; font-size: .82rem; }
+  .score i { width: 8px; height: 8px; border-radius: 50%; }
+  .users { position: absolute; right: .6rem; bottom: .58rem; z-index: 1; color: rgba(255, 255, 255, .8); font-size: .74rem; }
+  .nope { position: absolute; top: .5rem; right: .5rem; z-index: 2; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(10, 12, 18, .78); color: #fff; display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .card:hover .nope { opacity: 1; }
+  .nope:hover { background: var(--bad); }
+  .card h3 { font-size: .92rem; font-weight: 700; margin-top: .65rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card .meta { color: var(--muted); font-size: .78rem; margin-top: .2rem; }
+  .card .main { color: var(--accent); font-size: .76rem; font-weight: 600; margin-top: .15rem; }
+  .card .tags { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .45rem; }
+  .card .tags .pill { font-size: .7rem; padding: .12rem .5rem; }
+  body.no-ratings .score, body.no-ratings .users, body.no-ratings .ratings { display: none; }
+
+  /* Details: a centred window, like the original browser app */
+  .scrim { position: fixed; inset: 38px 0 0; background: rgba(0, 0, 0, .55); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 30; }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; z-index: 31; left: 50%; top: calc(50% + 19px); width: min(920px, 94vw); max-height: calc(100vh - 90px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 30px 80px rgba(0, 0, 0, .5); transform: translate(-50%, -48%) scale(.97); opacity: 0; pointer-events: none; transition: transform .2s ease, opacity .2s ease; }
+  .drawer.open { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
+  .drawer .close { position: absolute; top: 1rem; right: 1rem; z-index: 2; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); cursor: pointer; }
+  .dtop { display: grid; grid-template-columns: 250px 1fr; gap: 1.6rem; padding: 1.6rem 1.6rem 1.2rem; }
+  .dtop > img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 14px; box-shadow: var(--shadow); }
+  .dinfo { display: grid; gap: .9rem; align-content: start; padding-right: 2rem; }
+  .dinfo h2 { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+  .themes { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .theme { padding: .25rem .65rem; border-radius: 999px; font-size: .78rem; font-weight: 600; background: var(--surface-2); color: var(--muted); }
+  .theme.main { background: var(--accent-soft); color: var(--accent); }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
+  .metric { background: var(--surface-2); border-radius: 12px; padding: .65rem .8rem; }
+  .metric span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .metric b { display: block; font-size: 1.35rem; font-weight: 800; }
+  .ratings { display: grid; gap: .4rem; }
+  .dist { display: flex; align-items: flex-end; gap: 6px; height: 90px; }
+  .dist span { flex: 1; border-radius: 5px 5px 0 0; min-height: 2px; }
+  .dist-axis { display: flex; gap: 6px; font-size: .7rem; color: var(--faint); }
+  .dist-axis span { flex: 1; text-align: center; }
+  .synopsis { color: var(--muted); line-height: 1.6; }
+  .dfoot { border-top: 1px solid var(--line); padding: 1.1rem 1.6rem 1.5rem; display: grid; gap: 1rem; }
+  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; }
+  .actions .btn { justify-content: center; height: 40px; }
+  .dtags .pill.on { background: rgba(248, 113, 113, .14); border-color: var(--bad); color: var(--bad); }
+
+  /* Taste */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.4rem; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; }
+  .stat b { display: block; font-size: 1.6rem; font-weight: 800; margin-top: .15rem; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.2rem; }
+  .panel h2 { font-size: 1rem; margin-bottom: .9rem; }
+  .barrow { display: grid; grid-template-columns: 130px 1fr 40px; gap: .7rem; align-items: center; padding: .32rem 0; font-size: .85rem; }
+  .barrow small { color: var(--faint); margin-left: .3rem; font-size: .7rem; }
+  .bar { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: inherit; }
+
+  /* Profile */
+  .profile { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; }
+  .tabs { display: flex; flex-direction: column; gap: .2rem; }
+  .tab { padding: .55rem .75rem; border-radius: 10px; cursor: pointer; color: var(--muted); font-weight: 600; }
+  .tab:hover { color: var(--text); background: var(--surface-2); }
+  .tab.on { color: var(--text); background: var(--surface-2); }
+  .pane { display: none; max-width: 760px; } .pane.on { display: grid; gap: .9rem; }
+  .account { display: grid; grid-template-columns: 46px 1fr auto; gap: 1rem; align-items: center; padding: 1rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .account.linked { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .svc { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; color: #fff; font-size: .95rem; }
+  .account .sub { color: var(--muted); font-size: .8rem; }
+  .src { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); background: var(--accent-soft); padding: .12rem .45rem; border-radius: 6px; margin-left: .4rem; vertical-align: 2px; }
+  .setting { display: flex; align-items: center; gap: 1rem; padding: .9rem 1.1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .setting div { flex: 1; } .setting small { display: block; color: var(--muted); font-size: .8rem; }
+
+  /* Seanime host (mock): Seanime's menu on the left, our page without its own sidebar */
+  .sea-rail, .sea-tabs { display: none; }
+  body.host-sea .shell { grid-template-columns: 72px 1fr; grid-template-rows: none; }
+  body.host-sea .side { display: none; }
+  body.host-sea .ext-only { display: none; }
+  body.host-sea .sea-rail { display: flex; flex-direction: column; align-items: center; gap: .35rem; padding: .9rem 0; background: #08090c; border-right: 1px solid #1b1e26; position: sticky; top: 38px; height: calc(100vh - 38px); }
+  [data-theme="light"] body.host-sea .sea-rail { background: #eceef3; border-color: var(--line); }
+  .sea-logo { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; font-weight: 900; color: #fff; background: linear-gradient(135deg, #6366f1, #a855f7); margin-bottom: .6rem; }
+  .sea-item { width: 58px; display: flex; flex-direction: column; align-items: center; gap: .2rem; padding: .45rem 0; border-radius: 12px; color: #7d8496; cursor: pointer; font-size: .62rem; font-weight: 600; }
+  .sea-item svg { width: 21px; height: 21px; }
+  .sea-item:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+  .sea-item.on { color: #fff; background: rgba(139, 123, 255, .22); box-shadow: inset 0 0 0 1px rgba(139, 123, 255, .55); }
+  [data-theme="light"] .sea-item.on { color: var(--accent); }
+  .sea-bottom { margin-top: auto; }
+  body.host-sea .sea-tabs { display: flex; align-items: center; gap: .3rem; margin: -.4rem 0 1.4rem; border-bottom: 1px solid var(--line); }
+  .sea-tab { padding: .6rem .9rem; color: var(--muted); font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .sea-tab.on { color: var(--text); border-color: var(--accent); }
+  .sea-note { margin-left: auto; font-size: .78rem; color: var(--muted); }
+  body.host-sea .head h1 { font-size: 1.45rem; }
+  body.host-sea .tabs .tab[data-p="accounts"] { display: none; }
+
+  /* First run */
+  .onboard { display: none; min-height: calc(100vh - 38px); place-items: center; padding: 2rem; background: radial-gradient(1000px 500px at 20% 0%, rgba(139, 123, 255, .18), transparent), radial-gradient(800px 500px at 100% 100%, rgba(255, 111, 163, .12), transparent); }
+  body.first .onboard { display: grid; } body.first .shell { display: none; }
+  .wizard { width: min(540px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 2rem; box-shadow: var(--shadow); }
+  .wizard h1 { font-size: 1.6rem; font-weight: 800; margin: .9rem 0 .4rem; }
+  .steps { display: flex; gap: .4rem; margin-bottom: 1.4rem; }
+  .steps i { flex: 1; height: 4px; border-radius: 4px; background: var(--surface-3); }
+  .steps i.on { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .step { display: none; } .step.on { display: block; }
+  .covers { display: flex; gap: .5rem; margin: 1.2rem 0; }
+  .covers img { flex: 1; min-width: 0; aspect-ratio: 2/3; object-fit: cover; border-radius: 8px; }
+  .progress { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin: 1.2rem 0 .6rem; }
+  .progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 2.2s ease; }
+</style>
+</head>
+<body>
+
+<div class="mockbar">
+  <b style="color:#fff">Mockup</b><span>Shared web UI · hardcoded data</span>
+  <span class="spacer"></span>
+  <span>Theme</span><div class="seg" id="m-theme"><button class="on" data-v="dark">Dark</button><button data-v="light">Light</button></div>
+  <span>Host</span><div class="seg" id="m-host"><button class="on" data-v="ext">Browser extension</button><button data-v="sea">Seanime</button></div>
+  <span class="ext-only">Nav</span><div class="seg ext-only" id="m-nav"><button class="on" data-v="side">Sidebar</button><button data-v="top">Top bar</button></div>
+  <span class="ext-only">Screen</span><div class="seg ext-only" id="m-screen"><button data-v="first">First run</button><button class="on" data-v="app">App</button></div>
+  <a href="extension.html">Extension: popup, badge</a>
+  <a href="../layout/index.html">Wireframes</a>
+</div>
+
+<!-- First run -->
+<section class="onboard">
+  <div class="wizard">
+    <div class="steps"><i class="on"></i><i></i><i></i></div>
+    <div class="step on" data-step="1">
+      <div class="logo" style="width:44px;height:44px;border-radius:12px"></div>
+      <h1>Find your next favourite</h1>
+      <p class="muted">Recommendations learned from your own anime and manga list: what you scored, finished and dropped. Everything stays in your browser.</p>
+      <div class="covers" id="onboard-covers"></div>
+      <button class="btn primary" style="width:100%;justify-content:center;height:42px" data-next>Get started</button>
+    </div>
+    <div class="step" data-step="2">
+      <h1>Where do you track your list?</h1>
+      <p class="muted">Sign in to the site you already use. You can link more later.</p>
+      <div style="display:grid;gap:.6rem;margin-top:1rem" id="onboard-accounts"></div>
+      <p class="muted" style="font-size:.82rem;margin-top:1rem">Just looking? <a href="#" data-next>Try it with a public AniList username</a></p>
+    </div>
+    <div class="step" data-step="3">
+      <h1>Reading your list…</h1>
+      <p class="muted">Learning what you like from your scores, drops and rewatches.</p>
+      <div class="progress"><i id="prog"></i></div>
+      <p class="muted" style="font-size:.82rem" id="prog-text">Anime · 517 entries</p>
+      <button class="btn primary" style="width:100%;justify-content:center;height:42px;margin-top:1rem" id="finish">See my picks</button>
+    </div>
+  </div>
+</section>
+
+<div class="shell" id="shell">
+  <nav class="sea-rail" aria-label="Seanime menu (mock)">
+    <div class="sea-logo">S</div>
+    <a class="sea-item" title="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg><span>Home</span></a>
+    <a class="sea-item" title="Schedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Schedule</span></a>
+    <a class="sea-item" title="Discover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Discover</span></a>
+    <a class="sea-item" title="My lists"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>My lists</span></a>
+    <a class="sea-item" title="Manga"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h7a2 2 0 012 2v14a2 2 0 00-2-2H4zM20 4h-7a2 2 0 00-2 2v14a2 2 0 012-2h7z"/></svg><span>Manga</span></a>
+    <a class="sea-item on" title="For you (this plugin)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg><span>For you</span></a>
+    <a class="sea-item sea-bottom" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg><span>Settings</span></a>
+  </nav>
+  <aside class="side">
+    <div class="brand"><div class="logo"></div>Konomi.moe</div>
+    <a class="nav on" data-view="foryou"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>For you</a>
+    <a class="nav" data-view="taste"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Your taste</a>
+    <a class="nav nav-profile" data-view="profile"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>Profile</a>
+    <div class="side-foot">
+      <div class="sync"><span class="dot"></span>Synced 2 min ago</div>
+      <div class="me" data-view="profile"><div class="avatar">E</div><div>example_user<small>AniList</small></div></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- For you -->
+    <div class="sea-tabs">
+      <a class="sea-tab on" data-view="foryou">For you</a><a class="sea-tab" data-view="taste">Your taste</a><a class="sea-tab" data-view="profile">Settings</a>
+      <span class="sea-note">Signed in through Seanime · example_user</span>
+    </div>
+    <section class="view on" id="v-foryou">
+      <div class="head">
+        <div><h1>For you</h1><div class="sub" id="sub">20 picks from your AniList · updated 2 min ago</div></div>
+        <div class="tools">
+          <div class="seg" id="kind"><button class="on" data-v="anime">Anime</button><button data-v="manga">Manga</button></div>
+          <button class="btn" id="filters-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M6 12h12M10 19h4"/></svg>Filters <span class="badge">2</span></button>
+          <button class="btn primary" id="refresh"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 10-2.3 5.7M20 20v-6h-6"/></svg>Refresh picks</button>
+        </div>
+      </div>
+
+      <div class="filters" id="filters"><div><div class="filter-card">
+        <div>
+          <div class="label">Genres</div>
+          <div class="pills" id="genre-pills"></div>
+          <div class="label" style="margin-top:1rem">Tags</div>
+          <input class="field" placeholder="Search tags, e.g. Iyashikei, Time Travel…">
+          <div class="label" style="margin-top:1rem">Format</div>
+          <div class="pills" id="format-pills"></div>
+        </div>
+        <div>
+          <div class="label">First released</div>
+          <div style="display:flex;gap:.5rem;align-items:center"><input class="field" value="2005"> <span class="muted">to</span> <input class="field" value="Any"></div>
+          <div class="label" style="margin-top:1rem">Options</div>
+          <div class="toggles">
+            <label class="toggle"><span class="switch"><input type="checkbox"><span></span></span>Only where it's the main theme</label>
+            <label class="toggle"><span class="switch"><input type="checkbox" checked><span></span></span>Finished only</label>
+            <label class="toggle"><span class="switch"><input type="checkbox" checked><span></span></span>Hide titles already on my list</label>
+            <label class="toggle"><span class="switch"><input type="checkbox"><span></span></span><span id="seen-label">Hide titles whose manga I've read</span></label>
+          </div>
+        </div>
+        <div class="filter-foot"><button class="btn ghost">Reset</button><button class="btn">Save as default</button><button class="btn primary" id="apply">Apply</button></div>
+      </div></div></div>
+
+      <div class="chips">
+        <span class="pill on">Finished only <span class="x">✕</span></span>
+        <span class="pill on">From 2005 <span class="x">✕</span></span>
+        <span class="muted" style="font-size:.8rem;margin-left:.3rem">Hiding titles on your list</span>
+      </div>
+
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <!-- Taste -->
+    <section class="view" id="v-taste">
+      <div class="head"><div><h1>Your taste</h1><div class="sub">Learned from 325 titles on your list</div></div>
+        <div class="tools"><div class="seg"><button class="on">Anime</button><button>Manga</button></div></div></div>
+      <div class="stats">
+        <div class="stat"><span class="muted">On your list</span><b>517</b></div>
+        <div class="stat"><span class="muted">Scored</span><b>107</b></div>
+        <div class="stat"><span class="muted">Your average</span><b>6.4<span class="muted" style="font-size:1rem"> / 10</span></b></div>
+        <div class="stat"><span class="muted">Learned from</span><b>325</b></div>
+      </div>
+      <div class="two">
+        <div class="panel"><h2>Pulls you in</h2><div id="likes"></div></div>
+        <div class="panel"><h2>Puts you off</h2><div id="dislikes"></div></div>
+      </div>
+    </section>
+
+    <!-- Profile -->
+    <section class="view" id="v-profile">
+      <div class="head"><div><h1 id="profile-title">Profile</h1><div class="sub" id="profile-sub">Your accounts and preferences, stored in this browser</div></div></div>
+      <div class="profile">
+        <div class="tabs" id="tabs">
+          <a class="tab on" data-p="accounts">Accounts</a><a class="tab" data-p="prefs">Preferences</a>
+          <a class="tab" data-p="excl">Exclusions</a><a class="tab" data-p="data">Data &amp; privacy</a>
+        </div>
+        <div>
+          <div class="pane on" id="p-accounts"></div>
+          <div class="pane" id="p-prefs">
+            <div class="setting"><div>Show community ratings<small>Score and users on cards, distribution in details</small></div><span class="switch"><input type="checkbox" checked id="ratings-toggle"><span></span></span></div>
+            <div class="setting"><div>Include adult titles</div><span class="switch"><input type="checkbox"><span></span></span></div>
+            <div class="setting"><div>Number of picks<small>How many recommendations to show</small></div><select class="field" style="width:110px"><option>20</option><option>40</option><option>60</option></select></div>
+            <div class="setting"><div>Default filters<small>Finished only, from 2005</small></div><button class="btn">Edit</button></div>
+            <div class="setting"><div>Offline anime database<small>20,687 anime · July 2026 release</small></div><button class="btn">Update</button></div>
+          </div>
+          <div class="pane" id="p-excl">
+            <div class="panel"><h2>Not interested</h2><div class="chips" id="nope-list" style="margin:0"></div></div>
+            <div class="panel"><h2>Excluded titles <span class="muted" style="font-weight:400;font-size:.8rem">sequels follow</span></h2><div class="chips" style="margin:0"><span class="pill">Laid-Back Camp <span class="x">✕</span></span></div></div>
+            <div class="panel"><h2>Excluded tags, genres and studios</h2><div class="chips" style="margin:0"><span class="pill">Harem <span class="x">✕</span></span><span class="pill">Gore <span class="x">✕</span></span><span class="pill">Ecchi <span class="x">✕</span></span></div></div>
+            <div class="panel"><h2>Excluded custom lists</h2><div class="chips" style="margin:0"><span class="pill">Rewatch later <span class="x">✕</span></span></div></div>
+          </div>
+          <div class="pane" id="p-data">
+            <div class="setting"><div id="store-where">Stored in this browser<small>18 MB in the extension's own storage · nothing is sent to any server of ours</small></div></div>
+            <div class="setting"><div>Move to another computer<small>Export or import your profile, exclusions and settings</small></div><button class="btn">Export</button><button class="btn">Import</button></div>
+            <div class="setting"><div>Privacy<small>This app only talks to the list sites you sign in to (and AniList for title details). No analytics.</small></div></div>
+            <div class="setting"><div id="clear-what">Clear all data<small>Signs you out and deletes everything stored locally</small></div><button class="btn" style="color:var(--bad)">Clear</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const scoreColour = s => `hsl(${Math.max(0, Math.min(120, (s - 45) * 2.6))}, 70%, 55%)`;
+const compact = n => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? Math.round(n / 1e3) + "k" : n.toLocaleString();
+let kind = "anime", nope = [], host = "ext";
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+
+function render() {
+  const items = MOCK[kind].filter(m => !nope.includes(m.id)).slice(0, 20);
+  $("#sub").textContent = `${items.length} ${kind} picks from your AniList${host === "sea" ? " (via Seanime)" : ""} · updated 2 min ago`;
+  $("#seen-label").textContent = kind === "anime" ? "Hide titles whose manga I've read" : "Hide titles whose anime I've watched";
+  $("#grid").innerHTML = items.map((m, i) => `
+    <div class="card" data-id="${m.id}">
+      <div class="cv"><img src="${esc(m.cover)}" alt="" loading="lazy">
+        <span class="rank ${i < 3 ? "top3" : ""}">#${i + 1}</span>
+        <button class="nope" title="Not interested" data-nope="${m.id}">✕</button>
+        ${m.score ? `<span class="score"><i style="background:${scoreColour(m.score)}"></i>${m.score}%</span>` : ""}
+        <span class="users">${compact(m.users)}</span></div>
+      <h3>${esc(m.title)}</h3>
+      <div class="meta">${esc(m.format)} · ${m.year ?? "—"}</div>
+      <div class="main">Mainly ${esc(m.genres[0] || "—")}</div>
+      <div class="tags">${m.tags.slice(0, 2).map(t => `<span class="pill">${esc(t)}</span>`).join("")}</div>
+    </div>`).join("");
+  $("#nope-list").innerHTML = nope.length ? nope.map(id => `<span class="pill">${esc(find(id).title)} <span class="x">✕</span></span>`).join("") : `<span class="muted">Nothing yet. Use ✕ on a card.</span>`;
+}
+const find = id => [...MOCK.anime, ...MOCK.manga].find(m => m.id === id);
+
+function openDrawer(id) {
+  const m = find(id), max = Math.max(...m.dist.map(d => d[1]), 1);
+  const labels = [...m.genres.slice(0, 3).map(g => "genre:" + g), ...m.tags.map(t => "tag:" + t), ...(m.studio ? ["studio:" + m.studio] : [])];
+  $("#drawer").innerHTML = `
+    <button class="close" id="close" title="Close">✕</button>
+    <div class="dtop">
+      <img src="${esc(m.cover)}" alt="">
+      <div class="dinfo">
+        <h2>${esc(m.title)}</h2>
+        <div class="muted" style="font-size:.88rem">${esc(m.format)} · ${m.year ?? "—"}${m.length ? ` · ${m.length} ${kind === "anime" ? "episodes" : "chapters"}` : ""}${m.studio ? " · " + esc(m.studio) : ""}</div>
+        <div class="themes">${m.genres.slice(0, 4).map((g, i) => `<span class="theme ${i === 0 ? "main" : ""}">${esc(g)}${i === 0 ? " · main theme" : ""}</span>`).join("")}</div>
+        ${m.score ? `<div class="ratings">
+          <div class="metrics">
+            <div class="metric"><span>Average</span><b>${m.score}%</b></div>
+            <div class="metric"><span>Mean</span><b>${Math.min(99, m.score + 1)}%</b></div>
+            <div class="metric"><span>Users</span><b>${compact(m.users)}</b></div>
+            <div class="metric"><span>Favourites</span><b>${compact(Math.round(m.users * .07))}</b></div>
+          </div>
+          <div class="dist">${m.dist.map(([s, n]) => `<span title="${s}: ${n.toLocaleString()} users" style="height:${Math.max(3, n / max * 100)}%;background:hsl(${(s - 10) / 90 * 120},65%,52%)"></span>`).join("")}</div>
+          <div class="dist-axis">${m.dist.map(([s]) => `<span>${s}</span>`).join("")}</div>
+        </div>` : ""}
+        <div class="synopsis">${esc(m.synopsis)}</div>
+      </div>
+    </div>
+    <div class="dfoot">
+      <div class="actions">
+        <button class="btn primary" id="plan">＋ Add to planning</button>
+        <button class="btn" id="not">Not interested</button>
+        <button class="btn" id="excl">Exclude title and sequels</button>
+        ${host === "sea" ? `<button class="btn" id="open-sea">Open in Seanime</button>` : `<a class="btn" href="https://anilist.co/${kind}/${m.id}" target="_blank">Open on AniList ↗</a>`}
+      </div>
+      <div>
+        <div class="label">Exclude tags, genres or studios</div>
+        <div class="chips dtags" style="margin:0">${labels.map(l => `<span class="pill" data-tag="${esc(l)}">${esc(l.split(":")[1])}</span>`).join("")}</div>
+        <button class="btn" id="excl-tags" disabled style="margin-top:.6rem;opacity:.5">Exclude selected</button>
+      </div>
+    </div>`;
+  $("#drawer").classList.add("open"); $("#scrim").classList.add("open");
+  $("#close").onclick = closeDrawer;
+  if ($("#open-sea")) $("#open-sea").onclick = () => { toast(`Opening ${m.title} in Seanime`); closeDrawer(); };
+  $("#plan").onclick = () => { toast(`Added ${m.title} to your planning list`); closeDrawer(); };
+  $("#not").onclick = () => { nope.push(m.id); render(); toast(`Hidden ${m.title}. We'll show fewer like it.`); closeDrawer(); };
+  $("#excl").onclick = () => { nope.push(m.id); render(); toast(`Excluded ${m.title} and its sequels`); closeDrawer(); };
+  const btn = $("#excl-tags");
+  $$(".dtags .pill").forEach(p => p.onclick = () => {
+    p.classList.toggle("on");
+    const n = $$(".dtags .pill.on").length;
+    btn.disabled = !n; btn.style.opacity = n ? 1 : .5; btn.textContent = n ? `Exclude ${n} selected` : "Exclude selected";
+  });
+  btn.onclick = () => { toast(`Excluded ${$$(".dtags .pill.on").map(p => p.textContent).join(", ")}`); closeDrawer(); };
+}
+function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
+
+function seg(el, fn) { el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $$("button", el).forEach(x => x.classList.toggle("on", x === b)); fn(b.dataset.v); }); }
+seg($("#kind"), v => { kind = v; render(); });
+seg($("#m-theme"), v => document.documentElement.dataset.theme = v);
+seg($("#m-nav"), v => $("#shell").classList.toggle("top", v === "top"));
+seg($("#m-host"), v => {
+  host = v;
+  document.body.classList.toggle("host-sea", v === "sea");
+  document.body.classList.remove("first"); $$("#m-screen button").forEach((b, i) => b.classList.toggle("on", i === 1));
+  $("#profile-title").textContent = v === "sea" ? "Settings" : "Profile";
+  $("#store-where").innerHTML = v === "sea"
+    ? "Stored in Seanime<small>Kept in this plugin's storage inside Seanime · nothing is sent to any server of ours</small>"
+    : "Stored in this browser<small>18 MB in the extension's own storage · nothing is sent to any server of ours</small>";
+  $("#clear-what").innerHTML = v === "sea"
+    ? "Clear all data<small>Deletes this plugin's saved picks, settings and exclusions (your Seanime sign-in is untouched)</small>"
+    : "Clear all data<small>Signs you out and deletes everything stored locally</small>";
+  $("#profile-sub").textContent = v === "sea" ? "Uses the AniList account you're signed in with in Seanime" : "Your accounts and preferences, stored in this browser";
+  if (v === "sea" && $("#tabs .tab.on").dataset.p === "accounts") $('#tabs .tab[data-p="prefs"]').click();
+  render();
+});
+seg($("#m-screen"), v => { document.body.classList.toggle("first", v === "first"); if (v === "first") step(1); });
+
+$$("[data-view]").forEach(n => n.addEventListener("click", () => {
+  $$(".nav, .sea-tab").forEach(x => x.classList.toggle("on", x.dataset.view === n.dataset.view));
+  $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + n.dataset.view));
+}));
+$$("#tabs .tab").forEach(t => t.addEventListener("click", () => {
+  $$("#tabs .tab").forEach(x => x.classList.toggle("on", x === t));
+  $$(".pane").forEach(p => p.classList.toggle("on", p.id === "p-" + t.dataset.p));
+}));
+$("#grid").addEventListener("click", e => {
+  const n = e.target.closest("[data-nope]");
+  if (n) { e.stopPropagation(); const id = +n.dataset.nope; nope.push(id); render(); toast(`Hidden ${find(id).title}. We'll show fewer like it.`); return; }
+  const c = e.target.closest(".card"); if (c) openDrawer(+c.dataset.id);
+});
+$("#scrim").onclick = closeDrawer;
+document.addEventListener("keydown", e => e.key === "Escape" && closeDrawer());
+$("#filters-btn").onclick = () => $("#filters").classList.toggle("open");
+$("#apply").onclick = () => { $("#filters").classList.remove("open"); toast("Filters applied"); };
+$("#refresh").onclick = () => toast("Picks refreshed");
+$("#ratings-toggle").onchange = e => document.body.classList.toggle("no-ratings", !e.target.checked);
+
+const GENRES = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"];
+$("#genre-pills").innerHTML = GENRES.map(g => `<span class="pill">${g}</span>`).join("");
+$("#format-pills").innerHTML = ["TV", "Movie", "OVA", "ONA", "Special"].map(f => `<span class="pill">${f}</span>`).join("");
+$$(".filter-card .pill").forEach(p => p.onclick = () => p.classList.toggle("on"));
+
+const SVC = [["AniList", "AL", "#3aa7ff", true], ["MyAnimeList", "MAL", "#2e51a2"], ["Kitsu", "K", "#f75239", false, "Import only"], ["Shikimori", "S", "#343a40"]];
+$("#p-accounts").innerHTML = SVC.map(([n, a, c, linked, note]) => `
+  <div class="account ${linked ? "linked" : ""}"><div class="svc" style="background:${c}">${a}</div>
+    <div><b>${n}</b>${linked ? `<span class="src">List source</span>` : ""}<div class="sub">${linked ? "Signed in as example_user · 517 anime, 144 manga · synced 2 min ago" : "Not connected" + (note ? " · " + note : "")}</div></div>
+    <div style="display:flex;gap:.5rem">${linked ? `<button class="btn">Sync now</button><button class="btn ghost">Sign out</button>` : `<button class="btn">Connect</button>`}</div></div>`).join("");
+$("#onboard-accounts").innerHTML = SVC.map(([n, a, c, , note], i) => `
+  <div class="account"><div class="svc" style="background:${c}">${a}</div><div><b>${n}</b><div class="sub">Anime and manga${note ? " · " + note.toLowerCase() : i === 0 ? " · best results" : ""}</div></div>
+  <button class="btn ${i === 0 ? "primary" : ""}" data-next>Connect</button></div>`).join("");
+$("#onboard-covers").innerHTML = MOCK.anime.slice(0, 5).map(m => `<img src="${esc(m.cover)}" alt="">`).join("");
+
+function step(n) {
+  $$(".step").forEach(s => s.classList.toggle("on", +s.dataset.step === n));
+  $$(".steps i").forEach((s, i) => s.classList.toggle("on", i < n));
+  if (n === 3) { $("#prog").style.width = "0"; setTimeout(() => { $("#prog").style.width = "100%"; }, 50); setTimeout(() => $("#prog-text").textContent = "Anime · 517 entries ✓ · Manga · 144 entries ✓", 2200); }
+}
+document.addEventListener("click", e => { const n = e.target.closest("[data-next]"); if (n) { e.preventDefault(); step(+n.closest(".step").dataset.step + 1); } });
+$("#finish").onclick = () => $$("#m-screen button")[1].click();
+
+const LIKES = [["Iyashikei", "tag", 1.0], ["Kyoto Animation", "studio", .95], ["Slice of Life", "genre", .9], ["Found Family", "tag", .82], ["Romance", "genre", .78], ["Coming of Age", "tag", .7], ["Urban", "tag", .62]];
+const DISLIKES = [["Harem", "tag", 1.0], ["Gore", "tag", .86], ["Isekai", "tag", .8], ["Ecchi", "genre", .72], ["Mecha", "genre", .55], ["Battle Royale", "tag", .5], ["Super Power", "tag", .44]];
+const bars = (rows, col) => rows.map(([n, k, w]) => `<div class="barrow"><span>${n}<small>${k}</small></span><div class="bar"><i style="width:${w * 100}%;background:${col}"></i></div><span class="muted">${(w * 1.7).toFixed(1)}</span></div>`).join("");
+$("#likes").innerHTML = bars(LIKES, "linear-gradient(90deg, var(--accent), #a99cff)");
+$("#dislikes").innerHTML = bars(DISLIKES, "linear-gradient(90deg, var(--accent-2), #ff9cc0)");
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "@konomi/seanime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Seanime plugin: a For you page in Seanime's side menu running the shared UI.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "serve": "node scripts/serve.ts",
+    "release": "node scripts/build.ts --release && node scripts/smoke.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@konomi/engine": "*",
+    "@konomi/ui": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2"
+  }
+}

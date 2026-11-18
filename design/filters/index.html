@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filters: basic + advanced (wireframes)</title>
+<!-- The real app's stylesheet, so these look exactly like the product. -->
+<link rel="stylesheet" href="../../ui/src/styles.css">
+<link rel="stylesheet" href="filters.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<div class="reviewbar">
+  <b>Filters</b>
+  <div class="seg" id="r-variant">
+    <button data-v="today">Today</button>
+    <button data-v="a">A</button>
+    <button data-v="a1">A1 · Packed</button>
+    <button data-v="a2">A2 · Fields</button>
+    <button data-v="a3">A3 · One row</button>
+    <button data-v="compare">Compare</button>
+  </div>
+  <span class="earlier">Earlier</span>
+  <div class="seg" id="r-earlier"><button data-v="b">B</button><button data-v="c">C</button><button data-v="d">D</button></div>
+  <div class="seg" id="r-adv"><button data-v="0">Basic</button><button data-v="1">Advanced</button></div>
+  <span class="spacer"></span>
+  <span class="measure" id="r-measure"></span>
+  <div class="seg" id="r-theme"><button class="on" data-v="dark">Dark</button><button data-v="light">Light</button></div>
+  <div class="seg" id="r-notes"><button class="on" data-v="1">Notes on</button><button data-v="0">Off</button></div>
+</div>
+
+<div class="shell host-seanime">
+  <main>
+    <div class="page-tabs" role="tablist">
+      <button type="button" role="tab" class="page-tab on" aria-selected="true">For you</button>
+      <button type="button" role="tab" class="page-tab">Stats</button>
+      <button type="button" role="tab" class="page-tab">Settings</button>
+      <span class="note">Signed in through Seanime · synced 2 min ago</span>
+    </div>
+    <section class="view on">
+      <div class="head">
+        <div>
+          <h1>For you</h1>
+          <div class="sub" id="sub">Anime picks from your AniList · updated 2 min ago</div>
+        </div>
+        <div class="tools">
+          <fieldset class="seg" id="kind"><button type="button" class="on" data-v="ANIME">Anime</button><button type="button" data-v="MANGA">Manga</button></fieldset>
+        </div>
+      </div>
+      <div id="filters"></div>
+      <div id="results"></div>
+    </section>
+  </main>
+</div>
+
+<aside class="notes" id="notes"></aside>
+
+<script src="../mock/data.js"></script>
+<script src="filters.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "name": "@konomi/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The shared web UI, run by the Seanime plugin and the browser extension through a Host.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./session": "./src/session.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "jsdom": "^31.0.1",
+    "vite": "^7.3.8",
+    "vite-plugin-singlefile": "^2.3.4"
+  },
+  "dependencies": {
+    "@konomi/engine": "*",
+    "driver.js": "^1.14.0",
+    "preact": "^11.2.0"
+  }
+}

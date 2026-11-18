@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktop app layout (wireframe)</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  /* App shell: two navigation styles, toggled from the switcher bar. */
+  #app { display: grid; min-height: calc(100vh - 42px); }
+  #app.nav-side { grid-template-columns: 220px 1fr; }
+  #app.nav-top { grid-template-rows: auto 1fr; }
+  .appnav { background: var(--panel); border-right: 1px solid var(--line); padding: 1rem; display: flex; flex-direction: column; gap: .35rem; }
+  .nav-top .appnav { flex-direction: row; align-items: center; border-right: 0; border-bottom: 1px solid var(--line); padding: .6rem 1rem; gap: .25rem; }
+  .brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; margin-bottom: .75rem; }
+  .nav-top .brand { margin: 0 1rem 0 0; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--box); border: 1px dashed var(--line); }
+  .navlink { display: flex; align-items: center; gap: .55rem; padding: .45rem .6rem; border-radius: 8px; color: var(--ink); text-decoration: none; cursor: pointer; }
+  .navlink .ico { width: 18px; height: 18px; border-radius: 4px; background: var(--box); border: 1px dashed var(--line); }
+  .navlink.on { background: var(--ink); color: #fff; }
+  .navlink.on .ico { background: #555; border-color: #777; }
+  .navfoot { margin-top: auto; }
+  .nav-top .navfoot { margin: 0 0 0 auto; display: flex; gap: .5rem; align-items: center; }
+  .nav-top .navfoot .box { padding: .25rem .6rem; }
+  .nav-side .nav-profile-top { display: none; }
+  .nav-top .nav-profile-side { display: none; }
+  main { padding: 1.25rem 1.5rem; min-width: 0; }
+  .view { display: none; } .view.on { display: block; }
+
+  /* Filters */
+  .filters { display: none; margin-bottom: 1rem; }
+  .filters.open { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .6rem; }
+
+  /* Details drawer */
+  .drawer { position: fixed; top: 42px; right: 0; bottom: 0; width: min(440px, 92vw); background: var(--panel); border-left: 1px solid var(--line); box-shadow: -8px 0 24px rgba(0,0,0,.08); padding: 1rem; overflow: auto; transform: translateX(105%); transition: transform .18s ease; z-index: 5; }
+  .drawer.open { transform: none; }
+  .drawer .cover { aspect-ratio: 2 / 3; width: 120px; background: var(--box); border-radius: 8px; }
+  .bars { display: flex; align-items: flex-end; gap: 4px; height: 70px; }
+  .bars span { flex: 1; background: var(--box); border: 1px dashed var(--line); border-radius: 3px 3px 0 0; }
+
+  /* Profile sub-navigation */
+  .profile { display: grid; grid-template-columns: 180px 1fr; gap: 1.25rem; }
+  .subnav { display: flex; flex-direction: column; gap: .25rem; }
+  .subnav a { padding: .4rem .6rem; border-radius: 8px; color: var(--ink); text-decoration: none; cursor: pointer; }
+  .subnav a.on { background: var(--box); font-weight: 600; }
+  .sub { display: none; } .sub.on { display: block; }
+  .account { display: grid; grid-template-columns: 40px 1fr auto; gap: .75rem; align-items: center; padding: .75rem; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  .account .logo { width: 40px; height: 40px; }
+
+  /* First run */
+  #firstrun { display: none; min-height: calc(100vh - 42px); place-items: center; padding: 2rem; }
+  body.show-firstrun #firstrun { display: grid; }
+  body.show-firstrun #app, body.show-firstrun .drawer { display: none; }
+  .wizard { width: min(560px, 100%); }
+  .steps { display: flex; gap: .4rem; margin-bottom: 1rem; }
+  .steps span { flex: 1; height: 4px; border-radius: 4px; background: var(--box); }
+  .steps span.on { background: var(--ink); }
+  .step { display: none; } .step.on { display: block; }
+  body.hide-notes .note { display: none; }
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <a href="index.html">← Layouts</a>
+  <span>Desktop app</span>
+  <span class="spacer"></span>
+  <span>Navigation</span>
+  <div class="seg" id="navstyle"><button class="on" data-nav="side">Sidebar</button><button data-nav="top">Top bar</button></div>
+  <span>Screen</span>
+  <div class="seg" id="screen"><button data-screen="firstrun">First run</button><button class="on" data-screen="app">App</button></div>
+  <label><input type="checkbox" id="notes" checked> Notes</label>
+</div>
+
+<!-- ───────── First-run setup ───────── -->
+<section id="firstrun">
+  <div class="wizard panel">
+    <div class="steps"><span class="on"></span><span></span><span></span></div>
+
+    <div class="step on" data-step="1">
+      <div class="logo" style="width:48px;height:48px;margin-bottom:.75rem"></div>
+      <h1>Welcome to Konomi.moe</h1>
+      <p class="muted">Recommendations learned from your own anime and manga list. Everything stays on this computer. You only sign in to the list site you already use.</p>
+      <div class="row"><span class="spacer"></span><button class="btn primary" data-next>Get started</button></div>
+    </div>
+
+    <div class="step" data-step="2">
+      <h1>Where's your list?</h1>
+      <p class="muted">Pick the site you track your anime and manga on. You can add more later in Profile.</p>
+      <div class="stack">
+        <div class="account"><div class="logo"></div><div><b>AniList</b><div class="small muted">Anime and manga · best results</div></div><button class="btn primary" data-next>Connect</button></div>
+        <div class="account"><div class="logo"></div><div><b>MyAnimeList</b><div class="small muted">Anime and manga</div></div><button class="btn" data-next>Connect</button></div>
+        <div class="account"><div class="logo"></div><div><b>Kitsu</b><div class="small muted">Anime and manga · import only</div></div><button class="btn" data-next>Connect</button></div>
+        <div class="account"><div class="logo"></div><div><b>Shikimori</b><div class="small muted">Anime and manga</div></div><button class="btn" data-next>Connect</button></div>
+        <div class="row small muted">Just want to try it? <a data-next>Use a public AniList username</a></div>
+      </div>
+      <p class="note"><b>Note:</b> every site's list is matched to AniList behind the scenes, because AniList's ranked tags drive the recommendations.</p>
+    </div>
+
+    <div class="step" data-step="3">
+      <h1>Reading your list…</h1>
+      <div class="box" style="height:10px;padding:0;margin:.75rem 0"></div>
+      <p class="muted small">Anime list · 517 entries ✓<br>Manga list · 144 entries…<br>Matching titles and learning your taste</p>
+      <div class="row"><span class="spacer"></span><button class="btn primary" data-finish>See my picks</button></div>
+      <p class="note"><b>Note:</b> the first sync takes about a minute; later syncs only fetch what changed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── App shell ───────── -->
+<div id="app" class="nav-side">
+  <nav class="appnav">
+    <div class="brand"><div class="logo"></div>Konomi.moe</div>
+    <a class="navlink on" data-view="foryou"><span class="ico"></span>For you</a>
+    <a class="navlink" data-view="taste"><span class="ico"></span>Your taste</a>
+    <a class="navlink nav-profile-side" data-view="profile"><span class="ico"></span>Profile</a>
+    <div class="navfoot">
+      <div class="box small">Synced 2 min ago · <a>Sync</a></div>
+      <a class="navlink nav-profile-top" data-view="profile"><span class="ico" style="border-radius:50%"></span>Profile</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- For you -->
+    <section class="view on" id="view-foryou">
+      <div class="page-head">
+        <h1>For you</h1>
+        <div class="seg"><button class="on">Anime</button><button>Manga</button></div>
+        <span class="spacer"></span>
+        <button class="btn" id="filters-btn">Filters · 2</button>
+        <button class="btn primary">Refresh picks</button>
+      </div>
+      <div class="row" style="margin-bottom:.75rem">
+        <span class="chip">Romance · main theme ✕</span>
+        <span class="chip">Finished only ✕</span>
+        <span class="small muted">Hiding titles on your list · <a>change</a></span>
+      </div>
+      <div class="filters panel" id="filters">
+        <div class="box">Genres</div><div class="box">Tags</div><div class="box">Main theme only</div>
+        <div class="box">Formats</div><div class="box">First released (range)</div><div class="box">Finished only</div>
+        <div class="box">Hide titles on my list</div><div class="box">Hide what I've seen as manga/anime</div>
+        <div class="row"><button class="btn">Reset</button><button class="btn">Save as default</button></div>
+      </div>
+      <div class="cards" id="cards"></div>
+      <div class="stack" style="margin-top:1rem">
+        <p class="note"><b>Layout:</b> the Anime/Manga switch and filters sit at the top of the page they affect. Active filters show as removable chips, and the full panel only opens when needed. Filters are remembered between sessions.</p>
+        <p class="note"><b>Details:</b> clicking a card opens a side panel so the grid stays visible. The alternative is a centred window, like today's prototype.</p>
+      </div>
+    </section>
+
+    <!-- Your taste -->
+    <section class="view" id="view-taste">
+      <div class="page-head"><h1>Your taste</h1><div class="seg"><button class="on">Anime</button><button>Manga</button></div></div>
+      <div class="row" style="margin-bottom:1rem">
+        <div class="box" style="flex:1">On your list<br><b>517</b></div><div class="box" style="flex:1">Scored<br><b>107</b></div>
+        <div class="box" style="flex:1">Your average<br><b>6.4 / 10</b></div><div class="box" style="flex:1">Learned from<br><b>325</b></div>
+      </div>
+      <div class="row" style="align-items:stretch">
+        <div class="panel" style="flex:1"><h2>Pulls you in</h2><div class="stack"><div class="box">Feature · strength bar</div><div class="box">…</div><div class="box">…</div></div></div>
+        <div class="panel" style="flex:1"><h2>Puts you off</h2><div class="stack"><div class="box">Feature · strength bar</div><div class="box">…</div><div class="box">…</div></div></div>
+      </div>
+      <p class="note" style="margin-top:1rem"><b>Layout:</b> same Anime/Manga switch position as For you, so it never moves between pages.</p>
+    </section>
+
+    <!-- Profile -->
+    <section class="view" id="view-profile">
+      <div class="page-head"><h1>Profile</h1></div>
+      <div class="profile">
+        <div class="subnav" id="subnav">
+          <a class="on" data-sub="accounts">Accounts</a>
+          <a data-sub="prefs">Preferences</a>
+          <a data-sub="exclusions">Exclusions</a>
+          <a data-sub="data">Data &amp; privacy</a>
+        </div>
+        <div>
+          <div class="sub on" id="sub-accounts">
+            <h2>Accounts</h2>
+            <div class="stack">
+              <div class="account"><div class="logo"></div><div><b>AniList</b> <span class="chip">List source</span><div class="small muted">Signed in as example_user · synced 2 min ago</div></div><div class="row"><button class="btn">Sync now</button><button class="btn ghost">Sign out</button></div></div>
+              <div class="account"><div class="logo"></div><div><b>MyAnimeList</b><div class="small muted">Not connected</div></div><button class="btn">Connect</button></div>
+              <div class="account"><div class="logo"></div><div><b>Kitsu</b><div class="small muted">Not connected · import only</div></div><button class="btn">Connect</button></div>
+              <div class="account"><div class="logo"></div><div><b>Shikimori</b><div class="small muted">Not connected</div></div><button class="btn">Connect</button></div>
+            </div>
+            <p class="note" style="margin-top:.75rem"><b>Decide:</b> one account is the <b>list source</b>, which recommendations learn from and "Add to planning" writes to. Could several accounts be merged instead? Simpler to start with one.</p>
+          </div>
+          <div class="sub" id="sub-prefs">
+            <h2>Preferences</h2>
+            <div class="stack">
+              <div class="box">Default filters (what For you starts with)</div>
+              <div class="box">Number of picks</div>
+              <div class="box">Show community ratings</div>
+              <div class="box">Include adult titles</div>
+              <div class="box">Theme: system / light / dark</div>
+              <div class="box">Offline anime database (import / update)</div>
+            </div>
+          </div>
+          <div class="sub" id="sub-exclusions">
+            <h2>Exclusions</h2>
+            <div class="stack">
+              <div class="box">Not interested (titles you dismissed, also used as dislikes)</div>
+              <div class="box">Excluded titles (sequels follow)</div>
+              <div class="box">Excluded tags, genres and studios</div>
+              <div class="box">Excluded custom lists</div>
+            </div>
+            <p class="note" style="margin-top:.75rem"><b>Layout:</b> exclusions are mostly added from cards and details; this page is for reviewing and undoing them.</p>
+          </div>
+          <div class="sub" id="sub-data">
+            <h2>Data &amp; privacy</h2>
+            <div class="stack">
+              <div class="box">Everything is stored on this computer · cache size · location</div>
+              <div class="box">Export / import profile (move to another computer)</div>
+              <div class="box">Clear all data</div>
+              <div class="box">Privacy statement · which sites this app talks to</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Details drawer -->
+<aside class="drawer" id="drawer">
+  <div class="row"><span class="tag">Details</span><span class="spacer"></span><button class="btn ghost" id="close">✕</button></div>
+  <div class="row" style="align-items:flex-start;margin:.75rem 0">
+    <div class="cover"></div>
+    <div class="stack" style="flex:1;gap:.4rem">
+      <h2 id="drawer-title">Example Title</h2>
+      <div class="small muted">TV · 2019 · 12 episodes · Finished</div>
+      <div class="small">Mainly Romance · Comedy</div>
+      <div class="small">★ 81% · 37k users</div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="row"><button class="btn primary">Add to planning</button><button class="btn">Not interested</button><button class="btn ghost">Open on AniList ↗</button></div>
+    <div class="box">Synopsis</div>
+    <div><div class="tag">Score distribution</div><div class="bars"><span style="height:10%"></span><span style="height:8%"></span><span style="height:12%"></span><span style="height:18%"></span><span style="height:30%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:100%"></span><span style="height:85%"></span><span style="height:50%"></span></div></div>
+    <div><div class="tag">Tags · click to exclude</div><div class="row"><span class="chip">School</span><span class="chip">Heterosexual</span><span class="chip">Slice of Life</span><span class="chip">Studio X</span></div></div>
+    <div class="row"><button class="btn ghost">Exclude title and sequels</button></div>
+    <p class="note"><b>Decide:</b> "Not interested" hides the title <i>and</i> teaches the model you'd dislike it. "Exclude" only hides it (and sequels).</p>
+  </div>
+</aside>
+
+<script>
+  const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const titles = ["Example Title", "Another Show", "Quiet Story", "Third Pick", "Long Name That Wraps Over Two Lines", "Short", "Sample Manga", "Mock Series"];
+  $("#cards").innerHTML = Array.from({ length: 12 }, (_, i) =>
+    `<div class="card" data-title="${titles[i % titles.length]}"><div class="cover"><span class="rank">#${i + 1}</span>cover</div>
+     <div class="line"></div><div class="line short"></div><div class="row" style="margin-top:.4rem"><span class="chip">tag</span><span class="chip">tag</span></div></div>`).join("");
+
+  function pick(seg, attr, fn) {
+    seg.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      $$("button", seg).forEach(x => x.classList.toggle("on", x === b)); fn(b.dataset[attr]);
+    });
+  }
+  pick($("#navstyle"), "nav", v => { $("#app").className = "nav-" + v; });
+  pick($("#screen"), "screen", v => { document.body.classList.toggle("show-firstrun", v === "firstrun"); if (v === "firstrun") showStep(1); });
+  $("#notes").addEventListener("change", e => document.body.classList.toggle("hide-notes", !e.target.checked));
+
+  $$(".navlink").forEach(a => a.addEventListener("click", () => {
+    $$(".navlink").forEach(x => x.classList.toggle("on", x.dataset.view === a.dataset.view));
+    $$(".view").forEach(v => v.classList.toggle("on", v.id === "view-" + a.dataset.view));
+    $("#drawer").classList.remove("open");
+  }));
+  $$("#subnav a").forEach(a => a.addEventListener("click", () => {
+    $$("#subnav a").forEach(x => x.classList.toggle("on", x === a));
+    $$(".sub").forEach(s => s.classList.toggle("on", s.id === "sub-" + a.dataset.sub));
+  }));
+  $("#filters-btn").addEventListener("click", () => $("#filters").classList.toggle("open"));
+  $("#cards").addEventListener("click", e => {
+    const c = e.target.closest(".card"); if (!c) return;
+    $("#drawer-title").textContent = c.dataset.title; $("#drawer").classList.add("open");
+  });
+  $("#close").addEventListener("click", () => $("#drawer").classList.remove("open"));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") $("#drawer").classList.remove("open"); });
+
+  function showStep(n) {
+    $$(".step").forEach(s => s.classList.toggle("on", +s.dataset.step === n));
+    $$(".steps span").forEach((s, i) => s.classList.toggle("on", i < n));
+  }
+  $$("[data-next]").forEach(b => b.addEventListener("click", () => showStep(+b.closest(".step").dataset.step + 1)));
+  $("[data-finish]").addEventListener("click", () => $$("#screen button")[1].click());
+</script>
+</body>
+</html>

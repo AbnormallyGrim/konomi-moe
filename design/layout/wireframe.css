@@ -1,0 +1,49 @@
+/* Low-fidelity wireframe styles: structure only, no visual design yet. */
+* { box-sizing: border-box; }
+:root {
+  --bg: #f4f4f2; --panel: #ffffff; --line: #c9c9c4; --ink: #2b2b28; --muted: #85857f;
+  --box: #e7e7e3; --accent: #5b6cff; --note: #fff4c2; --note-line: #e2c94f;
+}
+body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+a { color: var(--accent); }
+h1, h2, h3 { margin: 0 0 .5rem; line-height: 1.2; }
+h1 { font-size: 1.35rem; } h2 { font-size: 1.1rem; } h3 { font-size: .95rem; }
+.muted { color: var(--muted); }
+.small { font-size: .8rem; }
+
+/* Generic wireframe blocks */
+.box { background: var(--box); border: 1px dashed var(--line); border-radius: 8px; padding: .6rem .75rem; color: var(--muted); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; }
+.row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.stack { display: flex; flex-direction: column; gap: .75rem; }
+.spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; }
+.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn.ghost { background: transparent; }
+.chip { display: inline-block; padding: .15rem .6rem; border: 1px solid var(--line); border-radius: 999px; font-size: .8rem; background: var(--panel); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel); padding: .35rem .8rem; font: inherit; cursor: pointer; }
+.seg button.on { background: var(--ink); color: #fff; }
+
+/* Annotations explaining a layout decision */
+.note { background: var(--note); border: 1px solid var(--note-line); border-radius: 8px; padding: .5rem .7rem; font-size: .8rem; color: #5a4b00; }
+.note b { color: #3d3300; }
+.tag { font-size: .7rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+
+/* Card placeholder */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: .5rem; cursor: pointer; }
+.card .cover { position: relative; aspect-ratio: 2 / 3; background: var(--box); border-radius: 6px; display: grid; place-items: center; color: var(--muted); font-size: .75rem; }
+.card .rank { position: absolute; top: .3rem; left: .3rem; background: var(--ink); color: #fff; border-radius: 999px; padding: 0 .45rem; font-weight: 700; font-size: .75rem; }
+.card .line { height: .55rem; background: var(--box); border-radius: 4px; margin-top: .45rem; }
+.card .line.short { width: 60%; }
+.cards.compact { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+
+/* Page header used inside views */
+.page-head { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+/* Top-level switcher bar above each wireframe */
+.switcher { position: sticky; top: 0; z-index: 10; display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; padding: .55rem 1rem; background: #1f1f1d; color: #ddd; font-size: .85rem; }
+.switcher a { color: #b8c0ff; }
+.switcher .seg button { background: #2c2c29; color: #ddd; }
+.switcher .seg button.on { background: #dcdcd6; color: #1f1f1d; }

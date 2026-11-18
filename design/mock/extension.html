@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extension mockup (popup, AniList badge)</title>
+<link rel="stylesheet" href="app.css">
+<style>
+  .page { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .page > section { margin-bottom: 3.5rem; }
+  .page h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: .3rem; }
+  .page h2.sec { font-size: 1.25rem; font-weight: 800; margin-bottom: .25rem; }
+  .lead { color: var(--muted); max-width: 760px; margin: 0 0 1.2rem; }
+  .note { font-size: .8rem; color: var(--muted); border-left: 3px solid var(--accent); padding: .2rem 0 .2rem .7rem; margin: 1rem 0 0; max-width: 760px; }
+
+  /* Fake browser */
+  .browser { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+  .chrome { display: flex; align-items: center; gap: .6rem; padding: .5rem .7rem; background: #202124; color: #bdc1c6; font-size: .78rem; }
+  [data-theme="light"] .chrome { background: #dee1e6; color: #3c4043; }
+  .lights { display: flex; gap: 6px; } .lights i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; } .lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+  .url { flex: 1; height: 28px; border-radius: 14px; background: #35363a; display: flex; align-items: center; padding: 0 .9rem; color: #e8eaed; }
+  [data-theme="light"] .url { background: #fff; color: #202124; }
+  .tb { position: relative; width: 30px; height: 28px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+  .tb:hover, .tb.on { background: rgba(255, 255, 255, .1); }
+  [data-theme="light"] .tb:hover, [data-theme="light"] .tb.on { background: rgba(0, 0, 0, .08); }
+  .tb svg { width: 18px; height: 18px; }
+  .tb .dotbadge { position: absolute; right: 2px; bottom: 3px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--accent-2); color: #fff; font-size: .58rem; font-weight: 800; display: grid; place-items: center; }
+  .viewport { position: relative; height: 640px; overflow: hidden; }
+
+  /* Popup (Chrome caps popups at 800x600; we use 380 wide) */
+  .popup { position: absolute; top: 6px; right: 10px; width: 380px; max-height: 600px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 18px 50px rgba(0, 0, 0, .5); z-index: 5; }
+  .pp-head { display: flex; align-items: center; gap: .55rem; padding: .75rem .9rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .pp-head svg.brand { width: 24px; height: 24px; }
+  .pp-head b { font-weight: 800; }
+  .pp-head .sp { flex: 1; }
+  .iconbtn { width: 30px; height: 30px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+  .iconbtn:hover { background: var(--surface-2); color: var(--text); }
+  .iconbtn svg { width: 17px; height: 17px; }
+  .pp-body { padding: .8rem .9rem; overflow-y: auto; display: grid; gap: .8rem; }
+  .pp-body .seg { width: 100%; } .pp-body .seg button { flex: 1; }
+  .here { border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); background: var(--accent-soft); border-radius: 12px; padding: .7rem; display: grid; grid-template-columns: 46px 1fr; gap: .7rem; }
+  .here img { width: 46px; aspect-ratio: 2/3; object-fit: cover; border-radius: 6px; }
+  .here .k { font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+  .here b { display: block; font-size: .9rem; line-height: 1.25; }
+  .here .why { font-size: .76rem; color: var(--muted); margin-top: .15rem; }
+  .here .acts { grid-column: 1 / -1; display: flex; gap: .4rem; }
+  .here .acts .btn { height: 30px; font-size: .78rem; padding: 0 .7rem; flex: 1; justify-content: center; }
+  .pick { display: grid; grid-template-columns: 22px 42px 1fr auto; gap: .6rem; align-items: center; padding: .35rem; border-radius: 10px; cursor: pointer; }
+  .pick:hover { background: var(--surface-2); }
+  .pick .n { font-weight: 800; color: var(--faint); text-align: center; font-size: .85rem; }
+  .pick img { width: 42px; aspect-ratio: 2/3; object-fit: cover; border-radius: 6px; }
+  .pick b { display: block; font-size: .84rem; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .pick small { color: var(--muted); font-size: .72rem; }
+  .pick .plus { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .pick:hover .plus { opacity: 1; }
+  .pp-foot { display: flex; align-items: center; gap: .6rem; padding: .7rem .9rem; border-top: 1px solid var(--line); background: var(--surface); }
+  .pp-foot .sync { flex: 1; font-size: .72rem; color: var(--muted); display: flex; align-items: center; gap: .4rem; }
+  .pp-foot .sync i { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+  .pp-foot .btn { height: 32px; font-size: .8rem; }
+  .pp-empty { text-align: center; padding: 1.4rem .6rem .6rem; display: grid; gap: .7rem; justify-items: center; }
+  .pp-empty svg.brand { width: 52px; height: 52px; }
+  .pp-empty h3 { font-size: 1.05rem; }
+  .pp-set { display: grid; gap: .5rem; }
+  .pp-set .setting { display: flex; gap: .7rem; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .6rem .7rem; font-size: .84rem; }
+  .pp-set .setting div { flex: 1; } .pp-set small { display: block; color: var(--muted); font-size: .72rem; }
+  .perm { font-size: .74rem; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: .55rem .7rem; }
+  .under { position: absolute; inset: 0; background: var(--bg); opacity: .35; }
+
+  /* Fake AniList title page (light, like AniList's default theme) */
+  .al { --al-bg: #edf1f5; --al-fg: #5c728a; --al-title: #3c4f63; --al-blue: #3db4f2; background: var(--al-bg); color: var(--al-fg); font: 13px/1.5 Overpass, "Segoe UI", system-ui, sans-serif; height: 100%; overflow-y: auto; }
+  .al.dark { --al-bg: #0b1622; --al-fg: #9fadbd; --al-title: #c8d1dc; --al-card: #151f2e; }
+  .al-nav { height: 52px; background: #2b2d42; display: flex; align-items: center; gap: 1.6rem; padding: 0 2rem; color: #bcbedc; font-weight: 600; }
+  .al.dark .al-nav { background: #152232; }
+  .al-nav .lg { width: 34px; height: 34px; border-radius: 6px; background: #3db4f2; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: .9rem; }
+  .al-banner { height: 190px; background-size: cover; background-position: center; }
+  .al-head { background: #fff; padding: 0 2rem 1.4rem; }
+  .al.dark .al-head { background: var(--al-card); }
+  .al-headin { display: grid; grid-template-columns: 215px 1fr; gap: 2rem; max-width: 1100px; margin: 0 auto; }
+  .al-cover { margin-top: -110px; display: grid; gap: .8rem; }
+  .al-cover img { width: 100%; border-radius: 3px; box-shadow: 0 14px 30px rgba(49, 54, 68, .25); }
+  .al-btns { display: flex; gap: .5rem; }
+  .al-add { flex: 1; height: 35px; border-radius: 3px; border: 0; background: var(--al-blue); color: #fff; font-weight: 700; font: inherit; font-weight: 700; }
+  .al-fav { width: 35px; height: 35px; border-radius: 3px; border: 0; background: #ec294b; color: #fff; }
+  .al-text h1 { color: var(--al-title); font-size: 1.45rem; font-weight: 500; margin: 1.4rem 0 .9rem; }
+  .al-text p { margin: 0; max-width: 760px; font-size: .86rem; line-height: 1.6; }
+  .al-tabs { display: flex; gap: 2.2rem; margin-top: 1.2rem; font-size: .84rem; }
+  .al-tabs span:first-child { color: var(--al-blue); }
+  .al-main { max-width: 1100px; margin: 1.6rem auto; display: grid; grid-template-columns: 215px 1fr; gap: 2rem; padding: 0 2rem; }
+  .al-side { background: #fff; border-radius: 3px; padding: 1rem 1.2rem; display: grid; gap: .8rem; font-size: .8rem; }
+  .al.dark .al-side { background: var(--al-card); }
+  .al-side b { display: block; color: var(--al-title); font-weight: 600; }
+  .al-block { background: #fff; border-radius: 3px; height: 140px; }
+  .al.dark .al-block { background: var(--al-card); }
+
+  /* Our badge, injected under AniList's Add to list buttons */
+  .fit { all: initial; display: block; font: 600 12.5px/1.35 Inter, system-ui, sans-serif; cursor: pointer; position: relative; }
+  .fit .chip { display: flex; align-items: center; gap: .5rem; padding: .5rem .65rem; border-radius: 6px; background: #fff; border: 1px solid #dfe6ee; color: #3c4f63; box-shadow: 0 2px 8px rgba(49, 54, 68, .08); }
+  .al.dark .fit .chip { background: #1a2638; border-color: #24344b; color: #c8d1dc; }
+  .fit .chip svg { width: 18px; height: 18px; flex: none; }
+  .fit .chip .v { flex: 1; } .fit .chip .v small { display: block; font-weight: 500; color: #8a9bb0; font-size: 11px; }
+  .fit .lvl { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .fit .card2 { display: none; position: absolute; top: calc(100% + 6px); left: 0; width: 290px; z-index: 3; background: #fff; color: #3c4f63; border: 1px solid #dfe6ee; border-radius: 8px; box-shadow: 0 18px 40px rgba(49, 54, 68, .22); padding: .85rem; font-weight: 500; }
+  .al.dark .fit .card2 { background: #1a2638; border-color: #24344b; color: #c8d1dc; }
+  .fit.open .card2 { display: block; }
+  .card2 h4 { margin: 0 0 .35rem; font-size: 13px; }
+  .card2 .rs { display: flex; flex-wrap: wrap; gap: .3rem; margin: .45rem 0 .7rem; }
+  .card2 .rs span { padding: .15rem .5rem; border-radius: 999px; font-size: 11px; background: #edf1f5; }
+  .al.dark .card2 .rs span { background: #24344b; }
+  .card2 .rs span.neg { background: #fde8ec; color: #c43554; }
+  .al.dark .card2 .rs span.neg { background: #3a1f2a; color: #ff8fa7; }
+  .card2 .ft { display: flex; gap: .4rem; border-top: 1px solid #dfe6ee; padding-top: .6rem; }
+  .al.dark .card2 .ft { border-color: #24344b; }
+  .card2 .ft button { flex: 1; height: 28px; border-radius: 5px; border: 1px solid #dfe6ee; background: transparent; color: inherit; font: 600 11.5px Inter, system-ui, sans-serif; cursor: pointer; }
+  .al.dark .card2 .ft button { border-color: #24344b; }
+  .card2 .ft button.p { background: #8b7bff; border-color: #8b7bff; color: #fff; }
+  .card2 .muted2 { color: #8a9bb0; font-size: 11px; }
+
+  .states { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: .8rem; margin-top: 1rem; }
+  .states .s { background: #edf1f5; border-radius: 10px; padding: .8rem; }
+  .states .s .lab { font: 600 .7rem Inter, system-ui, sans-serif; text-transform: uppercase; letter-spacing: .05em; color: #5c728a; margin-bottom: .45rem; }
+  .ctrl { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; font-size: .8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="mockbar">
+  <b style="color:#fff">Mockup</b><span>Extension surfaces · hardcoded data</span>
+  <span class="spacer"></span>
+  <span>Theme</span><div class="seg" id="m-theme"><button class="on" data-v="dark">Dark</button><button data-v="light">Light</button></div>
+  <a href="app.html">Full app</a>
+  <a href="../layout/index.html">Wireframes</a>
+</div>
+
+<div class="page">
+  <h1>Browser extension: toolbar popup and AniList badge</h1>
+  <p class="lead">The extension-only surfaces. Same public AniList titles as the app mockup, never a user's list.</p>
+
+  <p class="note" style="margin-bottom:2.5rem">The logo isn't decided yet. The grey square is a placeholder everywhere on this page.</p>
+
+  <!-- 2. Toolbar popup -->
+  <section>
+    <h2 class="sec">1 · Toolbar popup</h2>
+    <p class="lead">A quick glance, not the app: your top picks, a verdict for the AniList title you're looking at, and a button to open the full app in its own tab. Click the toolbar icon to close or open it.</p>
+    <div class="ctrl"><span>State</span>
+      <div class="seg" id="pp-state"><button class="on" data-v="title">On an AniList title</button><button data-v="picks">Anywhere else</button><button data-v="out">Signed out</button><button data-v="set">Settings</button></div>
+    </div>
+    <div class="browser">
+      <div class="chrome"><div class="lights"><i></i><i></i><i></i></div>
+        <div class="url" id="pp-url">anilist.co/anime/20954/A-Silent-Voice</div>
+        <div class="tb on" id="tb" title="Toolbar icon"></div>
+        <div class="tb" title="Other extension"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-3V4a1 1 0 00-1-1h-3a2 2 0 00-4 0H6a1 1 0 00-1 1v3a2 2 0 010 4v3a1 1 0 001 1h3a2 2 0 004 0h3a1 1 0 001-1v-3h3a2 2 0 000-4z"/></svg></div>
+      </div>
+      <div class="viewport">
+        <div class="al" id="pp-page"></div>
+        <div class="under"></div>
+        <div class="popup" id="popup"></div>
+      </div>
+    </div>
+    <p class="note">The pink count on the icon means new picks since you last looked. It's off by default (Settings), like the page badge, so the extension stays quiet until asked.</p>
+  </section>
+
+  <!-- 3. AniList badge -->
+  <section>
+    <h2 class="sec">2 · Badge on AniList title pages (opt-in)</h2>
+    <p class="lead">A small verdict under AniList's "Add to List" button, in words rather than a number (there's no fit score anywhere). Click it for the reasons and actions. Off until you switch it on, and that's the moment the browser asks for access to anilist.co.</p>
+    <div class="ctrl"><span>AniList theme</span><div class="seg" id="al-theme"><button class="on" data-v="light">Default</button><button data-v="dark">Dark</button></div>
+      <span>Title</span><div class="seg" id="al-title"></div></div>
+    <div class="browser">
+      <div class="chrome"><div class="lights"><i></i><i></i><i></i></div><div class="url" id="al-url"></div><div class="tb" id="tb2"></div></div>
+      <div class="viewport" style="height:760px"><div class="al" id="al-page"></div></div>
+    </div>
+    <h3 style="margin-top:1.4rem;font-size:1rem">Every badge state</h3>
+    <div class="states" id="states"></div>
+    <p class="note">Verdicts come from where the title would rank among your candidates: top tenth "Great match", top third "Good match", the rest "Mixed", and titles the model expects you to dislike "Not your usual". Titles already on your list get no verdict, just a line saying so. Too few scored titles to judge shows "Not enough to go on".</p>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2200); }
+function seg(el, fn) { el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; $$("button", el).forEach(x => x.classList.toggle("on", x === b)); fn(b.dataset.v); }); }
+
+/* Placeholder logo until branding is decided. */
+const LOGOS = { placeholder: () => `<svg viewBox="0 0 48 48"><rect x="1.5" y="1.5" width="45" height="45" rx="11" fill="#8d94a6" opacity=".35" stroke="#8d94a6" stroke-width="3" stroke-dasharray="6 4"/></svg>` };
+let brand = { k: "placeholder", name: "Konomi.moe" };
+
+/* Fake AniList page */
+const A = MOCK.anime;
+const byTitle = t => A.find(m => m.title.toLowerCase().includes(t)) || A[0];
+const HERE = A.find(m => /silent voice/i.test(m.title)) || A[1];
+function alPage(m, badge) {
+  return `<div class="al-nav"><div class="lg">AL</div><span>Home</span><span>Profile</span><span>Anime List</span><span>Manga List</span><span>Browse</span><span>Forum</span></div>
+    <div class="al-banner" style="background-image:url('${esc(m.banner || m.cover)}');background-color:${esc(m.color || "#2b2d42")}"></div>
+    <div class="al-head"><div class="al-headin">
+      <div class="al-cover"><img src="${esc(m.cover)}" alt=""><div class="al-btns"><button class="al-add">Add to List</button><button class="al-fav">♥</button></div>${badge || ""}</div>
+      <div class="al-text"><h1>${esc(m.title)}</h1><p>${esc(m.synopsis)}</p><div class="al-tabs"><span>Overview</span><span>Watch</span><span>Characters</span><span>Staff</span><span>Stats</span><span>Social</span></div></div>
+    </div></div>
+    <div class="al-main"><div class="al-side">
+      <div><b>Format</b>${esc(m.format)}</div><div><b>Episodes</b>${m.length ?? "?"}</div><div><b>Season</b>${m.year ?? "?"}</div>
+      <div><b>Average Score</b>${m.score ?? "?"}%</div><div><b>Studios</b>${esc(m.studio || "?")}</div><div><b>Genres</b>${esc(m.genres.join(", "))}</div>
+    </div><div style="display:grid;gap:1rem"><div class="al-block"></div><div class="al-block"></div></div></div>`;
+}
+
+/* Badge */
+const LEVELS = {
+  great: { label: "Great match for you", col: "#4ade80", sub: () => "Would be #3 in your picks" },
+  good: { label: "Good match", col: "#a3e635", sub: () => "In the top third of your picks" },
+  mixed: { label: "Mixed for you", col: "#facc15", sub: () => "Some things you like, some you don't" },
+  nope: { label: "Not your usual", col: "#f87171", sub: () => "Leans on things you tend to drop" },
+  onlist: { label: "On your list", col: "#8a9bb0", sub: () => "Completed · you scored it 9" },
+  thin: { label: "Not enough to go on", col: "#8a9bb0", sub: () => "Score a few more titles first" },
+};
+const REASONS = {
+  great: [["Coming of Age"], ["Kyoto Animation"], ["Slice of Life"], ["Drama"]],
+  good: [["Slice of Life"], ["Kyoto Animation"], ["Drama"]],
+  mixed: [["Romance"], ["School"], ["Harem", 1]],
+  nope: [["Gore", 1], ["Battle Royale", 1], ["Action"]],
+};
+function badge(m, lvl) {
+  const L = LEVELS[lvl], r = REASONS[lvl];
+  const logo = LOGOS[brand.k]();
+  const card = r ? `<div class="card2">
+      <h4>${esc(L.label)}</h4>
+      <div class="muted2">${esc(brand.name)} · from your AniList scores, drops and rewatches</div>
+      <div class="rs">${r.map(([t, neg]) => `<span class="${neg ? "neg" : ""}">${neg ? "− " : "+ "}${esc(t)}</span>`).join("")}</div>
+      <div class="ft"><button class="p" data-act="plan">Add to planning</button><button data-act="nope">Not interested</button><button data-act="app">Open in ${esc(brand.name)}</button></div>
+    </div>` : "";
+  return `<div class="fit" data-lvl="${lvl}"><div class="chip">${logo}<span class="v">${esc(L.label)}<small>${esc(L.sub(m))}</small></span><span class="lvl" style="background:${L.col}"></span></div>${card}</div>`;
+}
+document.addEventListener("click", e => {
+  const act = e.target.closest("[data-act]");
+  if (act) { e.stopPropagation(); toast({ plan: "Added to your planning list", nope: "Hidden. We'll show fewer like it.", app: `Opening ${brand.name} in a new tab` }[act.dataset.act]); act.closest(".fit")?.classList.remove("open"); return; }
+  const f = e.target.closest(".fit");
+  $$(".fit.open").forEach(x => x !== f && x.classList.remove("open"));
+  if (f && f.querySelector(".card2")) f.classList.toggle("open");
+});
+
+let alTitle = "great", alDark = false;
+const AL_TITLES = [["great", HERE], ["mixed", byTitle("sword art")], ["nope", byTitle("tokyo ghoul")], ["onlist", byTitle("attack on titan")]];
+$("#al-title").innerHTML = AL_TITLES.map(([l, m], i) => `<button class="${i ? "" : "on"}" data-v="${l}">${esc(m.title.split(/[:(]/)[0].slice(0, 18))}</button>`).join("");
+seg($("#al-title"), v => { alTitle = v; renderAl(); });
+seg($("#al-theme"), v => { alDark = v === "dark"; renderAl(); });
+function renderAl() {
+  const m = AL_TITLES.find(([l]) => l === alTitle)[1];
+  $("#al-url").textContent = `anilist.co/anime/${m.id}/${m.title.replace(/[^A-Za-z0-9]+/g, "-")}`;
+  $("#al-page").className = "al" + (alDark ? " dark" : "");
+  $("#al-page").innerHTML = alPage(m, badge(m, alTitle));
+  $("#tb2").innerHTML = LOGOS[brand.k]().replace("<svg", '<svg width="18" height="18"');
+  $("#states").innerHTML = Object.keys(LEVELS).map(l => `<div class="s"><div class="lab">${l === "onlist" ? "Already on your list" : l === "thin" ? "New user" : esc(LEVELS[l].label)}</div><div style="width:215px">${badge(HERE, l)}</div></div>`).join("");
+}
+
+/* Popup */
+let ppState = "title", ppOpen = true;
+const PICKS = A.filter(m => m !== HERE).slice(0, 5);
+const logoAt = s => LOGOS[brand.k]().replace("<svg", `<svg class="brand" width="${s}" height="${s}"`);
+const ICON = {
+  gear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>`,
+  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 10-2.3 5.7M20 20v-6h-6"/></svg>`,
+};
+function popup() {
+  const head = (title, left) => `<div class="pp-head">${left || logoAt(24)}<b>${esc(title)}</b><span class="sp"></span>${ppState === "set" ? "" : `<button class="iconbtn" title="Refresh picks" data-t="Picks refreshed">${ICON.refresh}</button><button class="iconbtn" title="Settings" data-state="set">${ICON.gear}</button>`}</div>`;
+  const foot = `<div class="pp-foot"><span class="sync"><i></i>Synced 2 min ago</span><button class="btn primary" data-t="Opening ${esc(brand.name)} in a new tab">Open ${esc(brand.name)} ↗</button></div>`;
+  const picks = `<div class="seg"><button class="on">Anime</button><button>Manga</button></div>
+    <div><div class="label" style="margin:0 0 .3rem">Your top picks</div>${PICKS.map((m, i) => `
+      <div class="pick" data-t="Opening ${esc(m.title)} on AniList"><span class="n">${i + 1}</span><img src="${esc(m.cover)}" alt=""><div><b>${esc(m.title)}</b><small>${esc(m.format)} · ${m.year} · Mainly ${esc(m.genres[0])}</small></div><button class="plus" title="Add to planning" data-t="Added ${esc(m.title)} to planning">＋</button></div>`).join("")}</div>`;
+  if (ppState === "out") return head(brand.name) + `<div class="pp-body"><div class="pp-empty">${logoAt(52)}<h3>Picks from your own list</h3><p class="muted" style="margin:0;font-size:.84rem">Sign in to the site where you track anime and manga. Everything stays in this browser.</p>
+      <button class="btn primary" style="width:100%;justify-content:center" data-t="AniList sign-in opens">Sign in with AniList</button>
+      <button class="btn" style="width:100%;justify-content:center" data-t="Full app opens on the sign-in step">MyAnimeList, Kitsu, Shikimori…</button></div></div>`;
+  if (ppState === "set") return head("Settings", `<button class="iconbtn" data-state="${ppPrev}" title="Back">${ICON.back}</button>`) + `<div class="pp-body pp-set">
+      <label class="setting"><div>Match badge on AniList pages<small>Shows a verdict under "Add to List"</small></div><span class="switch"><input type="checkbox" id="opt-badge"><span></span></span></label>
+      <div class="perm" id="perm" style="display:none">Your browser will ask to let ${esc(brand.name)} read anilist.co pages. It only reads the title's ID from the address.</div>
+      <label class="setting"><div>New-picks count on the icon<small>After each daily sync</small></div><span class="switch"><input type="checkbox"><span></span></span></label>
+      <label class="setting"><div>Sync in the background<small>Once a day while the browser is open</small></div><span class="switch"><input type="checkbox" checked><span></span></span></label>
+      <div class="muted" style="font-size:.74rem;text-align:center">Everything else lives in the full app's Profile.</div></div>` + foot;
+  const here = ppState === "title" ? `<div class="here"><img src="${esc(HERE.cover)}" alt=""><div><span class="k">This page</span><b>${esc(HERE.title)}</b><div class="why"><span style="color:var(--good)">●</span> Great match · Coming of Age, Kyoto Animation</div></div>
+      <div class="acts"><button class="btn primary" data-t="Added ${esc(HERE.title)} to planning">＋ Planning</button><button class="btn" data-t="Hidden. We'll show fewer like it.">Not interested</button></div></div>` : "";
+  return head(brand.name) + `<div class="pp-body">${here}${picks}</div>` + foot;
+}
+let ppPrev = "title";
+function renderPopup() {
+  $("#tb").innerHTML = LOGOS[brand.k]().replace("<svg", '<svg width="18" height="18"') + (ppState === "out" ? "" : `<span class="dotbadge">3</span>`);
+  $("#tb").classList.toggle("on", ppOpen);
+  $("#popup").style.display = ppOpen ? "" : "none";
+  $(".under").style.display = ppOpen ? "" : "none";
+  $("#popup").innerHTML = popup();
+  const onTitle = ppState === "title" || (ppState === "set" && ppPrev === "title");
+  $("#pp-url").textContent = onTitle ? `anilist.co/anime/${HERE.id}/${HERE.title.replace(/[^A-Za-z0-9]+/g, "-")}` : "news.ycombinator.com";
+  $("#pp-page").innerHTML = onTitle ? alPage(HERE, "") : `<div style="padding:2rem;color:#828282;font:13px Verdana">An unrelated page. The popup still shows your picks.</div>`;
+  $("#pp-page").style.background = onTitle ? "" : "#f6f6ef";
+  const ob = $("#opt-badge"); if (ob) ob.onchange = () => { $("#perm").style.display = ob.checked ? "" : "none"; if (ob.checked) toast("Browser permission prompt: Read and change your data on anilist.co"); };
+}
+$("#popup").addEventListener("click", e => {
+  const s = e.target.closest("[data-state]");
+  if (s) { if (s.dataset.state === "set") ppPrev = ppState; setState(s.dataset.state); return; }
+  const t = e.target.closest("[data-t]"); if (t) { e.stopPropagation(); toast(t.dataset.t); }
+});
+function setState(v) { ppState = v; $$("#pp-state button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); renderPopup(); }
+seg($("#pp-state"), v => { if (v === "set") ppPrev = ppState === "set" ? ppPrev : ppState; ppState = v; ppOpen = true; renderPopup(); });
+$("#tb").onclick = () => { ppOpen = !ppOpen; renderPopup(); };
+
+seg($("#m-theme"), v => document.documentElement.dataset.theme = v);
+function renderAll() { renderPopup(); renderAl(); }
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seanime plugin layout (wireframe)</title>
+<link rel="stylesheet" href="wireframe.css">
+<style>
+  /* A generic stand-in for Seanime's own interface (grey), with the plugin's parts highlighted. */
+  .host { display: grid; grid-template-columns: 64px 1fr; min-height: calc(100vh - 42px); }
+  .host-nav { background: #dedeD9; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; gap: .6rem; padding: .8rem 0; }
+  .host-nav .ico { width: 34px; height: 34px; border-radius: 10px; background: #c8c8c2; display: grid; place-items: center; font-size: .6rem; color: #6d6d68; cursor: pointer; }
+  .host-nav .ico.plugin { background: #fff; outline: 2px solid var(--accent); color: var(--accent); }
+  .host-main { min-width: 0; }
+  .host-top { display: flex; align-items: center; gap: .5rem; padding: .5rem 1rem; border-bottom: 1px solid var(--line); background: #ebebE6; position: relative; }
+  .host-top .search { flex: 1; max-width: 360px; height: 30px; border-radius: 8px; background: #d9d9d3; }
+  .tray-icon { width: 30px; height: 30px; border-radius: 8px; background: #d9d9d3; }
+  .tray-icon.plugin { background: #fff; outline: 2px solid var(--accent); cursor: pointer; }
+  .host-body { padding: 1rem 1.25rem; }
+  .host-block { background: #e3e3de; border-radius: 10px; color: #8a8a84; padding: .9rem; }
+  .plugin-area { border: 2px solid var(--accent); border-radius: 12px; padding: 1rem; background: var(--panel); position: relative; }
+  .plugin-area > .slot { position: absolute; top: -.7rem; left: .8rem; background: var(--accent); color: #fff; font-size: .7rem; padding: .05rem .5rem; border-radius: 999px; }
+  .hrow { display: grid; grid-auto-flow: column; grid-auto-columns: 130px; gap: .7rem; overflow-x: auto; padding-bottom: .3rem; }
+  .popover { position: absolute; top: 46px; right: .8rem; width: 320px; z-index: 3; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+  .mini { display: grid; grid-template-columns: 34px 1fr auto; gap: .55rem; align-items: center; padding: .35rem 0; border-bottom: 1px solid var(--box); }
+  .mini .c { aspect-ratio: 2/3; background: var(--box); border-radius: 4px; }
+  .view { display: none; } .view.on { display: block; }
+  .tabs { display: flex; gap: .3rem; border-bottom: 1px solid var(--line); margin-bottom: 1rem; }
+  .tabs a { padding: .45rem .8rem; cursor: pointer; border-bottom: 2px solid transparent; }
+  .tabs a.on { border-color: var(--ink); font-weight: 600; }
+  .ptab { display: none; } .ptab.on { display: block; }
+  body.hide-notes .note { display: none; }
+</style>
+</head>
+<body>
+
+<div class="switcher">
+  <a href="index.html">← Layouts</a>
+  <span>Seanime plugin</span>
+  <span class="spacer"></span>
+  <span>Where it appears</span>
+  <div class="seg" id="where">
+    <button class="on" data-v="page">Own page</button>
+    <button data-v="tray">Tray popover</button>
+    <button data-v="discover">Discover row</button>
+    <button data-v="entry">Title page</button>
+  </div>
+  <label><input type="checkbox" id="notes" checked> Notes</label>
+</div>
+
+<div class="host">
+  <nav class="host-nav">
+    <div class="ico">Home</div><div class="ico">Disc.</div><div class="ico">Sched.</div><div class="ico">Manga</div>
+    <div class="ico plugin" title="Plugin page">For you</div>
+  </nav>
+  <div class="host-main">
+    <div class="host-top">
+      <div class="search"></div><span class="spacer"></span>
+      <div class="tray-icon"></div><div class="tray-icon plugin" id="tray-btn" title="Plugin tray"></div><div class="tray-icon"></div>
+
+      <div class="panel popover" id="popover" style="display:none">
+        <div class="row"><b>Top picks for you</b><span class="spacer"></span><div class="seg"><button class="on">Anime</button><button>Manga</button></div></div>
+        <div style="margin:.5rem 0">
+          <div class="mini"><div class="c"></div><div>#1 Example Title<div class="small muted">Mainly Romance</div></div><span class="small">★ 81%</span></div>
+          <div class="mini"><div class="c"></div><div>#2 Another Show<div class="small muted">Mainly Slice of Life</div></div><span class="small">★ 79%</span></div>
+          <div class="mini"><div class="c"></div><div>#3 Quiet Story<div class="small muted">Mainly Drama</div></div><span class="small">★ 85%</span></div>
+        </div>
+        <div class="row"><span class="small muted">Updated 1 h ago</span><span class="spacer"></span><button class="btn primary">Open all picks</button></div>
+        <p class="note" style="margin-top:.6rem"><b>Note:</b> tray content is built from Seanime's own components (text, buttons, rows), not free-form HTML, so it stays simple: a quick glance and a way into the full page.</p>
+      </div>
+    </div>
+
+    <div class="host-body">
+      <!-- Own page: /webview?id=<plugin> -->
+      <section class="view on" id="v-page">
+        <div class="plugin-area">
+          <span class="slot">Plugin page · /webview?id=…</span>
+          <div class="page-head">
+            <h1>For you</h1>
+            <div class="seg"><button class="on">Anime</button><button>Manga</button></div>
+            <span class="spacer"></span><button class="btn">Filters · 2</button><button class="btn primary">Refresh picks</button>
+          </div>
+          <div class="tabs" id="ptabs"><a class="on" data-t="picks">Picks</a><a data-t="taste">Your taste</a><a data-t="settings">Settings</a></div>
+          <div class="ptab on" id="t-picks"><div class="cards" id="cards"></div></div>
+          <div class="ptab" id="t-taste"><div class="row" style="align-items:stretch"><div class="box" style="flex:1;height:140px">Pulls you in</div><div class="box" style="flex:1;height:140px">Puts you off</div></div></div>
+          <div class="ptab" id="t-settings"><div class="stack">
+            <div class="box">Default filters · number of picks · show ratings</div>
+            <div class="box">Exclusions: not interested, titles, tags, custom lists</div>
+            <div class="box">Account: uses the AniList account signed in to Seanime (read-only here)</div>
+          </div></div>
+          <div class="stack" style="margin-top:1rem">
+            <p class="note"><b>Layout:</b> no Profile or account linking: Seanime already has the user signed in, so <i>Settings</i> replaces Profile and only holds preferences and exclusions.</p>
+            <p class="note"><b>Decide:</b> clicking a card could open Seanime's own title page (where the user already adds titles to lists) instead of our details panel. This means less to build, and it feels native.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tray: the popover above is shown; the page behind is Seanime's home -->
+      <section class="view" id="v-tray">
+        <div class="stack"><div class="host-block" style="height:180px">Seanime home (banner)</div><div class="host-block" style="height:220px">Continue watching</div></div>
+      </section>
+
+      <!-- Discover row -->
+      <section class="view" id="v-discover">
+        <div class="stack">
+          <div class="host-block" style="height:150px">Seanime Discover header</div>
+          <div class="plugin-area">
+            <span class="slot">Slot: after-discover-screen-header</span>
+            <div class="row" style="margin-bottom:.6rem"><h2 style="margin:0">Recommended for you</h2><span class="spacer"></span><a>See all</a></div>
+            <div class="hrow" id="hrow"></div>
+          </div>
+          <div class="host-block" style="height:200px">Seanime trending / popular rows</div>
+        </div>
+      </section>
+
+      <!-- Title page -->
+      <section class="view" id="v-entry">
+        <div class="stack">
+          <div class="host-block" style="height:160px">Seanime title page: banner, cover, title, list status</div>
+          <div class="plugin-area">
+            <span class="slot">Slot: after-media-entry-details</span>
+            <div class="row"><b>How well this fits you</b><span class="chip">Likely to enjoy</span><span class="small muted">because of Romance, School, Studio X</span></div>
+            <div class="row" style="margin-top:.6rem"><span class="small muted">If you like this:</span><span class="chip">Pick A</span><span class="chip">Pick B</span><span class="chip">Pick C</span></div>
+          </div>
+          <div class="host-block" style="height:180px">Seanime episodes / chapters</div>
+          <p class="note"><b>Idea:</b> a fit verdict on every title page the user opens, worded as a label (not a number, since users found the "fit" score meaningless). Optional; it can come after the main page.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = (s, el = document) => el.querySelector(s), $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const card = i => `<div class="card"><div class="cover"><span class="rank">#${i + 1}</span>cover</div><div class="line"></div><div class="line short"></div></div>`;
+  $("#cards").innerHTML = Array.from({ length: 10 }, (_, i) => card(i)).join("");
+  $("#hrow").innerHTML = Array.from({ length: 8 }, (_, i) => card(i)).join("");
+
+  function show(v) {
+    $$("#where button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+    $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
+    $("#popover").style.display = v === "tray" ? "block" : "none";
+  }
+  $("#where").addEventListener("click", e => { const b = e.target.closest("button"); if (b) show(b.dataset.v); });
+  $("#tray-btn").addEventListener("click", () => show($("#popover").style.display === "block" ? "page" : "tray"));
+  $(".host-nav .plugin").addEventListener("click", () => show("page"));
+  $$("#ptabs a").forEach(a => a.addEventListener("click", () => {
+    $$("#ptabs a").forEach(x => x.classList.toggle("on", x === a));
+    $$(".ptab").forEach(t => t.classList.toggle("on", t.id === "t-" + a.dataset.t));
+  }));
+  $("#notes").addEventListener("change", e => document.body.classList.toggle("hide-notes", !e.target.checked));
+</script>
+</body>
+</html>
