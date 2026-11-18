@@ -4,11 +4,11 @@
  * Run with `npm run build -w seanime` (Node 23.6+ runs this TypeScript directly).
  *
  * `--release` (`npm run release -w seanime`) points the manifest at its published address and
- * also writes it to release/<id>.json. Committing that file to main publishes it: Seanime users
+ * also writes it to release/<id>.json, with the code in release/<id>-<version>.js (payloadURI). Committing that file to main publishes it: Seanime users
  * install from the raw GitHub link, and Seanime's update check fetches the same link.
  */
 
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
@@ -92,10 +92,27 @@ const out = join(root, "dist", `${ID}.json`);
 await writeFile(out, `${JSON.stringify(manifest, null, 2)}\n`);
 await copyFile(join(root, "assets/icon-128.png"), join(root, "dist", ICON_FILE));
 if (RELEASE) {
-  await mkdir(join(root, "release"), { recursive: true });
-  await writeFile(join(root, "release", `${ID}.json`), `${JSON.stringify(manifest, null, 2)}\n`);
-  await copyFile(join(root, "assets/icon-128.png"), join(root, "release", ICON_FILE));
-  console.log(`release: seanime/release/${ID}.json (version ${pkg.version}); commit it to main`);
+  // The release keeps the code in its own file (payloadURI) so it can be read and diffed.
+  // Seanime downloads it once at install and stores it inline, and skips it on update checks.
+  // The file name carries the version: raw.githubusercontent.com caches each file for a few
+  // minutes, so a fixed name could pair a new manifest with old code right after a release.
+  const dir = join(root, "release");
+  const payloadFile = `${ID}-${pkg.version}.js`;
+  const { payload: _inline, ...rest } = manifest;
+  const released = { ...rest, payloadURI: new URL(payloadFile, MANIFEST_URI).href };
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, payloadFile), payload);
+  await writeFile(join(dir, `${ID}.json`), `${JSON.stringify(released, null, 2)}\n`);
+  await copyFile(join(root, "assets/icon-128.png"), join(dir, ICON_FILE));
+  // Keep the previous version's code too, for anyone whose cached manifest still points at it.
+  const old = (await readdir(dir))
+    .filter((f) => f.startsWith(`${ID}-`) && f.endsWith(".js") && f !== payloadFile)
+    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
+    .slice(1);
+  for (const f of old) await rm(join(dir, f));
+  console.log(
+    `release: seanime/release/${ID}.json + ${payloadFile} (version ${pkg.version}); commit both to main`,
+  );
 }
 console.log(
   `wrote ${out} (${Math.round(payload.length / 1024)} KB payload, page ${Math.round(html.length / 1024)} KB)`,

@@ -2,15 +2,25 @@
  * Runs the built payload the way Seanime does: evaluate the script, check there's a global
  * `init`, call it with stub `$ui`/`$anilist`/`$storage`, then send one request through the
  * registered webview. Catches bundling mistakes the unit tests can't (node scripts/smoke.ts).
+ * Pass a manifest path to check another build (`node scripts/smoke.ts release/konomi-moe.json`);
+ * a manifest with payloadURI loads its code from the file of that name beside it.
  */
 
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const manifest = JSON.parse(await readFile(join(root, "dist/konomi-moe.json"), "utf8"));
+const manifestPath = resolve(root, process.argv[2] ?? "dist/konomi-moe.json");
+const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+// Like Seanime: a payloadURI is fetched at install and stored as the payload. Here the file is
+// read from beside the manifest, so the release is checked before it's pushed.
+if (!manifest.payload && manifest.payloadURI) {
+  const file = basename(new URL(manifest.payloadURI).pathname);
+  manifest.payload = await readFile(join(dirname(manifestPath), file), "utf8");
+}
+if (!manifest.payload) throw new Error("manifest has neither payload nor payloadURI");
 // Seanime's manifest checks (internal/extension_repo/utils.go), so a bad build fails here.
 for (const field of [
   "id",

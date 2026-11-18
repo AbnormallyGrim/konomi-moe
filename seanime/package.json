@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node scripts/build.ts",
     "serve": "node scripts/serve.ts",
-    "release": "node scripts/build.ts --release && node scripts/smoke.ts",
+    "release": "node scripts/build.ts --release && node scripts/smoke.ts && node scripts/smoke.ts release/konomi-moe.json",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
