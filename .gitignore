@@ -227,3 +227,11 @@ data/
 
 # Node / TypeScript
 node_modules/
+
+# Local machine and editor files
+.DS_Store
+.idea/
+
+# Agent skills linked from the local .venv (broken links anywhere else)
+.agents/skills/developing-with-streamlit
+.claude/skills/developing-with-streamlit
