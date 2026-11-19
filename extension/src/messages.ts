@@ -1,5 +1,3 @@
-/** Requests from the popup and the AniList badge to the background, and its replies. */
-
 import type { MediaType } from "@konomi/engine";
 import { api } from "./browser.ts";
 import type { Action } from "./channel.ts";
@@ -9,7 +7,6 @@ export interface Requests {
   verdict: { args: { id: number; type: MediaType }; result: TitleVerdict };
   action: { args: { action: Action }; result: string };
   openApp: { args: Record<string, never>; result: null };
-  /** The popup was opened: the new-picks count resets. */
   seen: { args: Record<string, never>; result: null };
 }
 export type RequestKind = keyof Requests;

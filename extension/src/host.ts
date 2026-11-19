@@ -1,9 +1,3 @@
-/**
- * The extension's `Host` for the shared UI and the background: AniList with the user's token
- * (private lists included, and add to planning), the store in IndexedDB, links opened directly,
- * and trailers played in an embedded player, none of which Seanime's sandboxed frame allowed.
- */
-
 import { AniListClient, fetchTransport, type Media, queries, type Transport } from "@konomi/engine";
 import type { Host, HostUser } from "@konomi/ui/host";
 import {
@@ -20,18 +14,15 @@ import { CHANNEL, type ChannelMessage } from "./channel.ts";
 import { get, put, STORE_KEY } from "./kv.ts";
 
 export interface ExtensionHost extends Host {
-  /** The current sign-in; changes when the user signs in or out on the welcome screen. */
   auth: Auth | null;
 }
 
-/** Opens a link in a new tab, from a page or from the background. */
 export function openTab(url: string): void {
   if (typeof window !== "undefined" && typeof window.open === "function")
     window.open(url, "_blank", "noopener");
   else void api().tabs.create({ url });
 }
 
-/** The engine store tells others it changed, so the background drops its cached copy. */
 function announceSave(): void {
   const channel = new BroadcastChannel(CHANNEL);
   channel.postMessage({ type: "saved" } satisfies ChannelMessage);
@@ -42,7 +33,6 @@ export function extensionHost(initial: Auth | null, options: { page: boolean }):
   let mutations: AniListClient | null = null;
   let pending: PendingSignIn | null = null;
   const token = () => (host.auth?.kind === "anilist" ? host.auth.token : undefined);
-  // AniList with the user's token when signed in (private lists count), else anonymously.
   const transport: Transport = (body) => {
     const t = token();
     return fetchTransport(t ? { token: t } : {})(body);

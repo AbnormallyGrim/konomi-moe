@@ -1412,7 +1412,6 @@ body {
   color: var(--muted);
 }
 
-/* The Konomi.moe logo (sidebar and welcome screen) */
 .logo {
   display: block;
   object-fit: contain;
@@ -1966,7 +1965,6 @@ button.tab.on {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
-/* The embedded trailer player (browser extension), over the title's dialog. */
 .player {
   position: fixed;
   inset: 0;
@@ -2017,7 +2015,6 @@ button.tab.on {
   white-space: nowrap;
 }
 
-/* Welcome: AniList sign-in (browser extension), with a public username as the fallback */
 .welcome .signin {
   justify-content: center;
   height: 44px;

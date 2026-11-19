@@ -1,5 +1,3 @@
-/** Entry point of the full app, in its own tab (also the extension's options page). */
-
 import { mount } from "@konomi/ui";
 import type { Session } from "@konomi/ui/session";
 import { runAction } from "./actions.ts";
@@ -11,7 +9,6 @@ import { extensionHost } from "./host.ts";
 
 const root = document.getElementById("app") ?? document.body;
 
-/** True once this tab holds the app lock: then it's the store's only writer. */
 let holder = false;
 
 function serve(session: Session, refresh: () => void): () => void {
@@ -36,12 +33,10 @@ async function start() {
     root.textContent = "This page only works inside the Konomi.moe extension.";
     return;
   }
-  // Held until the tab closes. A second app tab waits here and takes over when the first closes.
   void navigator.locks?.request(APP_LOCK, () => {
     holder = true;
     return new Promise<void>(() => {});
   });
-  // Also set by the background on start; repeated here in case the tab opens first.
   void allowEmbeds().catch(() => {});
   const host = extensionHost(await loadAuth(), { page: true });
   host.serve = serve;

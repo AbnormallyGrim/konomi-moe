@@ -27,7 +27,6 @@ export interface Trailer {
   site: "youtube" | "dailymotion";
   /** The video's page, such as https://www.youtube.com/watch?v=… */
   url: string;
-  /** The site's embeddable player for the video (YouTube's privacy-enhanced domain). */
   embedUrl: string;
   /** A preview image (YouTube's is 4:3 with bars; crop it to 16:9). */
   thumbnail: string | null;

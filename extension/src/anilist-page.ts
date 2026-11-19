@@ -1,5 +1,3 @@
-/** AniList title pages: /anime/<id>/… and /manga/<id>/…. */
-
 export function titleFromPath(path: string): { id: number; type: "ANIME" | "MANGA" } | null {
   const m = /^\/(anime|manga)\/(\d+)(?:\/|$)/.exec(path);
   if (!m) return null;

@@ -194,7 +194,6 @@ export interface RankOptions {
   includeListed?: boolean;
 }
 
-/** A ranking score: the model's prediction plus the community score, weighted by list size. */
 export function blendScore(profile: Profile, m: Media, predicted: number): number {
   const community = ((m.averageScore ?? 70) - 70) / 10;
   return predicted + profile.communityWeight * community;

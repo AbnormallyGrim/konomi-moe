@@ -1,9 +1,3 @@
-/**
- * The WebExtension APIs the extension uses, typed just enough. Chrome (and Edge, Brave, Opera,
- * Vivaldi) expose them as `chrome.*` and Firefox as `browser.*`; under Manifest V3 both return
- * promises, so one wrapper serves all of them.
- */
-
 export interface Tab {
   id?: number;
   url?: string;
@@ -62,7 +56,6 @@ export interface ExtensionApi {
     getCurrent(): Promise<Tab | undefined>;
     update(tabId: number, properties: { active?: boolean }): Promise<Tab>;
     remove(tabId: number): Promise<void>;
-    /** `changeInfo.url` is only reported for sites the extension has host access to. */
     onUpdated: Event<(tabId: number, changeInfo: { url?: string }, tab: Tab) => void>;
     onRemoved: Event<(tabId: number) => void>;
   };
@@ -93,14 +86,12 @@ export interface ExtensionApi {
 
 const g = globalThis as { browser?: ExtensionApi; chrome?: ExtensionApi };
 
-/** The browser's extension API, or `undefined` outside an extension (tests, the dev page). */
 export const ext: ExtensionApi | undefined = g.browser?.runtime?.id
   ? g.browser
   : g.chrome?.runtime?.id
     ? g.chrome
     : undefined;
 
-/** The extension API; throws when the code runs outside an extension. */
 export function api(): ExtensionApi {
   if (!ext) throw new Error("This page only works inside the Konomi.moe extension.");
   return ext;

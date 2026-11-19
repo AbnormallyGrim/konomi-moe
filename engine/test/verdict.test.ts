@@ -7,7 +7,6 @@ function profile() {
   return buildProfile(entries, new Map(media.map((m) => [m.id, m])));
 }
 
-/** Candidate scores spread from -1 down to -5.35 (the seed list's model centres near -1.9). */
 const POOL = Array.from({ length: 30 }, (_, i) => -1 - i * 0.15);
 
 describe("judge", () => {

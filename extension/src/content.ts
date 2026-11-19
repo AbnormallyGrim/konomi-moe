@@ -1,10 +1,3 @@
-/**
- * The opt-in badge on AniList title pages: a verdict in words under AniList's "Add to List"
- * button, opening to the reasons and actions (design/mock/extension.html, section 2). It lives in
- * a shadow root so AniList's styles and ours don't mix. AniList is a single-page app, so the
- * address is watched and the badge follows it.
- */
-
 import type { Reason, VerdictLevel } from "@konomi/engine";
 import { titleFromPath } from "./anilist-page.ts";
 import { api } from "./browser.ts";
@@ -12,7 +5,6 @@ import { send } from "./messages.ts";
 import type { TitleVerdict } from "./verdicts.ts";
 
 const HOST_ID = "konomi-moe-badge";
-/** Where AniList keeps the cover and its buttons; the badge goes right under the buttons. */
 const ANCHOR = ".cover-wrap-inner .actions";
 
 const LEVELS: Record<VerdictLevel, { label: string; colour: string }> = {
@@ -33,7 +25,6 @@ const STATUS_WORDS: Record<string, string> = {
   REPEATING: "Rewatching",
 };
 
-/** The line under the verdict. */
 export function subline(v: TitleVerdict): string {
   if (v.state === "setup") return v.reason;
   const { verdict } = v;
@@ -99,7 +90,6 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-/** AniList's dark and contrast themes darken the page background. */
 function darkPage(): boolean {
   const rgb = getComputedStyle(document.body).backgroundColor.match(/\d+/g)?.map(Number) ?? [];
   const [r = 255, g = 255, b = 255] = rgb;
@@ -170,14 +160,8 @@ function render(root: ShadowRoot, v: TitleVerdict, id: number, type: "ANIME" | "
   root.replaceChildren(el("style", { textContent: CSS }), wrap);
 }
 
-/** The title on screen and its verdict, once it has arrived. */
 let current: { key: string; verdict: TitleVerdict | null } = { key: "", verdict: null };
 
-/**
- * Runs on every tick: asks for a verdict when the title changes, and (re)places the badge
- * whenever AniList has drawn its buttons but the badge isn't there, since AniList redraws the
- * header on navigation.
- */
 function update(): void {
   const title = titleFromPath(location.pathname);
   const key = title ? `${title.type}:${title.id}` : "";

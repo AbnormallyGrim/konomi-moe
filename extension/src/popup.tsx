@@ -1,10 +1,3 @@
-/**
- * The toolbar popup (design/mock/extension.html, section 1): a quick glance, not the app. Your
- * top picks, a verdict for the AniList title you're looking at, and a button to the full app.
- * It reads the store directly; changes go through the background, which hands them to the app
- * tab when that's open (see channel.ts).
- */
-
 import type { MediaType, Recommendation } from "@konomi/engine";
 import { displayTitle, type Picks, Session, type Settings } from "@konomi/ui/session";
 import { render } from "preact";
@@ -191,7 +184,6 @@ function Foot({ synced }: { synced: number | null }) {
   );
 }
 
-/** The AniList title in the current tab, with its verdict. */
 function Here({ loaded, here }: { loaded: Loaded; here: { id: number; type: MediaType } }) {
   const [v, setV] = useState<TitleVerdict | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -363,7 +355,6 @@ function PrefsView() {
         checked={prefs.badge}
         onChange={(on) => {
           if (!on) return void set({ badge: false });
-          // Asked here, in the click: browsers only show the prompt for a user's action.
           api()
             .permissions.request({ origins: [ANILIST_PAGES] })
             .then(

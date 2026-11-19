@@ -1,9 +1,3 @@
-/**
- * The background (a service worker in Chromium, an event page in Firefox): verdicts for the
- * AniList badge, the popup's and the badge's actions, the daily sync, the new-picks count on
- * the toolbar icon, and registering the badge's content script when it's switched on.
- */
-
 import { Session, TYPES } from "@konomi/ui/session";
 import { runAction } from "./actions.ts";
 import { loadAuth } from "./auth.ts";
@@ -18,13 +12,10 @@ import { verdictFor } from "./verdicts.ts";
 const SYNC_ALARM = "daily-sync";
 const DAY_MINUTES = 24 * 60;
 const CONTENT_SCRIPT = "anilist-badge";
-/** A read-only session is reused this long for verdicts (opening one parses the whole store). */
 const SESSION_TTL_MS = 5 * 60_000;
 const SEEN_KEY = "seenPicks";
 
 const ext = api();
-
-/* Sessions */
 
 let cached: { session: Promise<Session | null>; at: number } | null = null;
 
@@ -34,7 +25,6 @@ async function openSession(): Promise<Session | null> {
   return Session.open(extensionHost(auth, { page: false }), auth.name);
 }
 
-/** A session for reading (verdicts), cached until the store changes. */
 function readSession(): Promise<Session | null> {
   if (!cached || Date.now() - cached.at > SESSION_TTL_MS) {
     cached = { session: openSession(), at: Date.now() };
@@ -45,15 +35,10 @@ function readSession(): Promise<Session | null> {
   return cached.session;
 }
 
-// The app tab saved: the cached copy is out of date.
 new BroadcastChannel(CHANNEL).onmessage = (e: MessageEvent<ChannelMessage>) => {
   if (e.data.type === "saved") cached = null;
 };
 
-/**
- * Chrome stops an idle service worker after 30 s, even mid-fetch; any extension API call
- * restarts that clock. Long jobs (a sync) call this to stay alive.
- */
 async function keepAlive<T>(job: () => Promise<T>): Promise<T> {
   const timer = setInterval(() => void ext.storage.local.get(PREFS_KEY), 20_000);
   try {
@@ -62,8 +47,6 @@ async function keepAlive<T>(job: () => Promise<T>): Promise<T> {
     clearInterval(timer);
   }
 }
-
-/* Actions: the open app tab is the only writer; without one, the background writes. */
 
 async function act(action: Action): Promise<string> {
   if (await appIsOpen()) return askApp(action);
@@ -75,13 +58,11 @@ async function act(action: Action): Promise<string> {
   return done;
 }
 
-/* Daily sync and the new-picks count */
-
 async function backgroundSync(): Promise<void> {
   const prefs = await getPrefs();
   if (!prefs.backgroundSync || (await appIsOpen())) return;
   const session = await openSession();
-  if (!session || !(await session.lastSynced())) return; // the app runs the first sync
+  if (!session || !(await session.lastSynced())) return;
   await keepAlive(async () => {
     await session.sync();
     for (const type of TYPES) await session.recommend(type);
@@ -91,7 +72,6 @@ async function backgroundSync(): Promise<void> {
   await updateCount(session);
 }
 
-/** The top page of picks per type: what "new picks" is counted against. */
 async function topPicks(session: Session): Promise<number[]> {
   const { limit } = await session.settings();
   const ids: number[] = [];
@@ -106,7 +86,6 @@ async function updateCount(session: Session): Promise<void> {
   const ids = await topPicks(session);
   const saved = (await ext.storage.local.get(SEEN_KEY))[SEEN_KEY] as number[] | undefined;
   if (!saved) {
-    // Nothing seen yet: today's picks are the baseline, not "new".
     await ext.storage.local.set({ [SEEN_KEY]: ids });
     return showCount(0);
   }
@@ -124,8 +103,6 @@ async function markSeen(): Promise<void> {
   if (session) await ext.storage.local.set({ [SEEN_KEY]: await topPicks(session) });
   await showCount(0);
 }
-
-/* Preferences: the alarm and the badge's content script follow them */
 
 async function applyPrefs(): Promise<void> {
   const prefs = await getPrefs();
@@ -160,8 +137,6 @@ async function syncContentScript(wanted: boolean): Promise<void> {
   }
 }
 
-/* Events */
-
 async function handle(request: Request): Promise<unknown> {
   switch (request.kind) {
     case "verdict": {
@@ -189,14 +164,13 @@ ext.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         error: e instanceof Error ? e.message : String(e),
       } satisfies Reply),
   );
-  return true; // answers asynchronously
+  return true;
 });
 
 ext.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes[PREFS_KEY]) void applyPrefs();
 });
 
-// Taking away anilist.co access in the browser's settings turns the badge off.
 ext.permissions.onRemoved.addListener((removed) => {
   if (removed.origins?.some((o) => o.includes("anilist.co"))) void setPrefs({ badge: false });
 });
@@ -207,11 +181,9 @@ ext.alarms?.onAlarm.addListener((alarm) => {
 
 ext.runtime.onInstalled.addListener((details) => {
   void applyPrefs();
-  // First install: open the app, where sign-in and the first sync happen.
   if (details.reason === "install") void ext.runtime.openOptionsPage();
 });
 ext.runtime.onStartup.addListener(() => void applyPrefs());
 void ext.action?.setBadgeBackgroundColor({ color: "#ff6fa3" });
-// Content scripts registered for this session only; register again whenever the worker starts.
 void getPrefs().then((p) => syncContentScript(p.badge));
 void allowEmbeds().catch(() => {});

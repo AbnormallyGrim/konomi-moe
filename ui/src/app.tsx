@@ -208,10 +208,8 @@ export function App({ host }: { host: Host }) {
   const [error, setError] = useState<string | null>(null);
   /** The host's background first sync, while the page waits for it. */
   const [setup, setSetup] = useState<Busy | null>(null);
-  /** Bumped when the store is reopened after an outside change, to start the page afresh. */
   const [revision, setRevision] = useState(0);
 
-  /** The signed-in user as the host knows them (the extension adds a profile picture). */
   const [user, setUser] = useState<HostUser | null>(null);
 
   const start = useCallback(
@@ -242,8 +240,6 @@ export function App({ host }: { host: Host }) {
     );
   }, [host, start]);
 
-  // While the page is open, the extension's popup and AniList badge act through its session
-  // (the page is then the store's only writer); redraw after their changes.
   useEffect(() => {
     if (!session || !host.serve) return;
     return host.serve(session, () => setRevision((r) => r + 1));
@@ -276,7 +272,6 @@ export function App({ host }: { host: Host }) {
   return <Shell key={revision} session={session} avatarUrl={user?.avatarUrl ?? null} />;
 }
 
-/** The user's AniList picture, or their initial when there's none or it fails to load. */
 function UserAvatar({ name, url }: { name: string; url: string | null }) {
   const [broken, setBroken] = useState(false);
   if (url && !broken)
@@ -289,7 +284,6 @@ function Welcome(props: { host: Host; onUser: (user: HostUser, typed: boolean) =
   const signIn = host.signIn?.bind(host);
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  /** idle → waiting for AniList (the paste box shows) → checking the token. */
   const [step, setStep] = useState<"idle" | "waiting" | "checking">("idle");
   const [failed, setFailed] = useState<string | null>(null);
   const done = useRef(false);
@@ -333,7 +327,6 @@ function Welcome(props: { host: Host; onUser: (user: HostUser, typed: boolean) =
                 onClick={() => {
                   setFailed(null);
                   setStep("waiting");
-                  // Called straight from the click: the browser may ask for access to AniList.
                   signIn().then(finish, fail);
                 }}
               >
@@ -1636,7 +1629,6 @@ function Details(props: {
   const [details, setDetails] = useState<TitleDetails | null | "failed">(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [planning, setPlanning] = useState<"idle" | "busy" | "done" | "listed">("idle");
-  /** The trailer playing in the embedded player, on hosts that can embed one. */
   const [playing, setPlaying] = useState<Trailer | null>(null);
   const playingRef = useRef(playing);
   playingRef.current = playing;
@@ -1644,7 +1636,6 @@ function Details(props: {
   useEffect(() => {
     session.themesOf(m).then(setThemes);
     session.titleDetails(m.id).then(setDetails, () => setDetails("failed"));
-    // Escape closes the player first, then the dialog.
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (playingRef.current) setPlaying(null);
@@ -1691,7 +1682,6 @@ function Details(props: {
               <TrailerButton
                 trailer={details.trailer}
                 onOpen={async (trailer) => {
-                  // Only YouTube is embedded: Dailymotion's player answered 403 when tested.
                   if (host.embedsTrailers && trailer.site === "youtube") {
                     setPlaying(trailer);
                     return;
@@ -1909,7 +1899,6 @@ function TrailerButton(props: { trailer: Trailer; onOpen: (trailer: Trailer) => 
   );
 }
 
-/** The site's player parameters: start at once, and no unrelated videos at the end. */
 function playerUrl(trailer: Trailer): string {
   const url = new URL(trailer.embedUrl);
   url.searchParams.set("autoplay", "1");
@@ -1920,7 +1909,6 @@ function playerUrl(trailer: Trailer): string {
   return url.href;
 }
 
-/** A large embedded player over the dialog, with a link to the video's own page. */
 function TrailerPlayer(props: { trailer: Trailer; title: string; onClose: () => void }) {
   const { trailer } = props;
   const site = SITE_NAMES[trailer.site];

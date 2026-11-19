@@ -1,10 +1,3 @@
-/**
- * The extension's own storage. The engine store (megabytes of JSON) and the sign-in live in
- * IndexedDB, which the app tab, the popup and the background share (one extension origin) and
- * which `unlimitedStorage` exempts from quota. Small preferences live in `storage.local`
- * (prefs.ts), because content scripts and change events need them.
- */
-
 const DB = "konomi";
 const STORE = "kv";
 
@@ -48,7 +41,5 @@ export async function remove(key: string): Promise<void> {
   await run("readwrite", (s) => s.delete(key));
 }
 
-/** The engine store's JSON. */
 export const STORE_KEY = "store";
-/** The sign-in (`Auth`, see auth.ts). */
 export const AUTH_KEY = "auth";

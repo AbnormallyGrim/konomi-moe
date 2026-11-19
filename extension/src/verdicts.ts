@@ -1,8 +1,3 @@
-/**
- * Verdicts on single titles for the AniList badge and the popup: the user's model is fitted
- * offline from the store and the title placed among their ranked candidates (engine `judge`).
- */
-
 import {
   judge,
   type MediaType,
@@ -16,7 +11,6 @@ import {
 import { displayTitle, type Session } from "@konomi/ui/session";
 import { titleById } from "./actions.ts";
 
-/** How many ranked candidates a title is compared with. */
 export const VERDICT_POOL = 1000;
 
 export type TitleVerdict =
@@ -25,10 +19,8 @@ export type TitleVerdict =
       verdict: Verdict;
       title: string;
       coverUrl: string | null;
-      /** Whether "Add to planning" can work (signed in with AniList, not on a list). */
       canPlan: boolean;
     }
-  /** Not signed in, or this type's list isn't synced yet: the full app sets things up. */
   | { state: "setup"; reason: string };
 
 interface Ranking {
@@ -38,7 +30,6 @@ interface Ranking {
 
 const rankings = new WeakMap<Session, Map<MediaType, Promise<Ranking | null>>>();
 
-/** The user's model and candidate scores for a type, once per session; `null` without a list. */
 function ranking(session: Session, type: MediaType): Promise<Ranking | null> {
   let byType = rankings.get(session);
   if (!byType) {
@@ -73,7 +64,6 @@ function ranking(session: Session, type: MediaType): Promise<Ranking | null> {
   return known;
 }
 
-/** A verdict on a title by ID; its type comes from AniList, whatever page it was found on. */
 export async function verdictFor(session: Session, id: number): Promise<TitleVerdict> {
   const media = await titleById(session, id);
   const ranked = await ranking(session, media.type);
