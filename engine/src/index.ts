@@ -93,6 +93,7 @@ export {
   tagCategories,
 } from "./pipeline.ts";
 export {
+  blendScore,
   buildProfile,
   candidateSources,
   discoveryTags,
@@ -160,3 +161,12 @@ export {
   type Theme,
   Themes,
 } from "./themes.ts";
+export {
+  GOOD_SHARE,
+  GREAT_SHARE,
+  judge,
+  MIN_POOL,
+  NOPE_BELOW,
+  type Verdict,
+  type VerdictLevel,
+} from "./verdict.ts";

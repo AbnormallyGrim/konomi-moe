@@ -1,0 +1,24 @@
+{
+  "name": "@konomi/extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The browser extension: the shared UI in its own tab, a toolbar popup and an opt-in badge on AniList title pages.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@konomi/engine": "*",
+    "@konomi/ui": "*",
+    "preact": "^11.2.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "vite": "^7.3.8"
+  }
+}

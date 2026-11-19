@@ -19,11 +19,16 @@ export interface StaffMember extends Person {
   roles: string[];
 }
 
-/** A title's trailer, as a link: Seanime's sandboxed page can't embed players. */
+/**
+ * A title's trailer. Seanime's sandboxed page can only link to it; the browser extension's
+ * pages can embed it (`embedUrl`).
+ */
 export interface Trailer {
   site: "youtube" | "dailymotion";
   /** The video's page, such as https://www.youtube.com/watch?v=… */
   url: string;
+  /** The site's embeddable player for the video (YouTube's privacy-enhanced domain). */
+  embedUrl: string;
   /** A preview image (YouTube's is 4:3 with bars; crop it to 16:9). */
   thumbnail: string | null;
 }
@@ -90,10 +95,16 @@ export function parseTrailer(node: DetailsNode["trailer"]): Trailer | null {
     return {
       site: "youtube",
       url: `https://www.youtube.com/watch?v=${id}`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${id}`,
       thumbnail: thumbnail ?? `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     };
   if (node?.site === "dailymotion")
-    return { site: "dailymotion", url: `https://www.dailymotion.com/video/${id}`, thumbnail };
+    return {
+      site: "dailymotion",
+      url: `https://www.dailymotion.com/video/${id}`,
+      embedUrl: `https://geo.dailymotion.com/player.html?video=${id}`,
+      thumbnail,
+    };
   return null;
 }
 

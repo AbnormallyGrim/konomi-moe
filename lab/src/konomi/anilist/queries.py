@@ -127,7 +127,7 @@ query (
     + MEDIA_FIELDS
 )
 
-VIEWER = "query { Viewer { id name } }"
+VIEWER = "query { Viewer { id name avatar { medium } } }"
 
 MEDIA_DESCRIPTION = "query ($id: Int) { Media(id: $id) { description(asHtml: false) } }"
 
