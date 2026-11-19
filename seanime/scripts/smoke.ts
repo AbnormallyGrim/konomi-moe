@@ -41,8 +41,11 @@ if (!/^\d+\.\d+\.\d+$/.test(manifest.version)) throw new Error("version isn't x.
 if (manifest.type !== "plugin" || manifest.plugin?.version !== "1")
   throw new Error("bad plugin manifest");
 console.log("manifest checks: ok");
-/** The plugin's dialogs by title: what each renders, and whether it was opened. */
-const modals = new Map<string, { render: (() => unknown[]) | null; opened: boolean }>();
+/**
+ * The plugin's dialog. Like Seanime (internal/plugin/ui/modal.go) there is one per plugin:
+ * each newModal call replaces its title, and render replaces its content.
+ */
+const modal = { title: "", render: null as (() => unknown[]) | null, opened: false };
 const handlers = new Map<string, (p: unknown) => void>();
 const sent: unknown[] = [];
 let options: unknown;
@@ -135,14 +138,13 @@ const ctx = {
     };
   },
   newModal: (opts: { title: string }) => {
-    const state = { render: null as (() => unknown[]) | null, opened: false };
-    modals.set(opts.title, state);
+    modal.title = opts.title;
     const m = {
       render: (fn: () => unknown[]) => {
-        state.render = fn;
+        modal.render = fn;
       },
       open: () => {
-        state.opened = true;
+        modal.opened = true;
       },
       close: () => {},
       update: () => {},
@@ -182,20 +184,31 @@ handlers.get("rpc")?.({
   args: ["https://anilist.co/anime/1", "Test"],
 });
 if (!(sent.at(-1) as { ok?: boolean })?.ok) throw new Error("the AniList request failed");
-/** Whether the dialog with this title was opened and shows `link`. */
-const opensWith = (title: string, link: string) => {
-  const m = modals.get(title);
-  return Boolean(m?.opened && JSON.stringify(m.render?.() ?? null).includes(link));
+/** Whether the dialog is open with this title and shows `link`, and nothing else's link. */
+const opensWith = (title: string, link: string, not: string) => {
+  const shown = JSON.stringify(modal.render?.() ?? null);
+  const ok = modal.opened && modal.title === title && shown.includes(link) && !shown.includes(not);
+  modal.opened = false;
+  return ok;
 };
-if (!opensWith("Open on AniList", "https://anilist.co/anime/1"))
+const trailer = "https://www.youtube.com/watch?v=tR8YH0G67Rk";
+if (!opensWith("Open on AniList", "https://anilist.co/anime/1", trailer))
   throw new Error("the AniList dialog didn't open with the link");
 console.log("AniList dialog: opens with the link");
-const trailer = "https://www.youtube.com/watch?v=tR8YH0G67Rk";
 handlers.get("rpc")?.({ id: 3, method: "openTrailer", args: [trailer, "Test"] });
 if (!(sent.at(-1) as { ok?: boolean })?.ok) throw new Error("the trailer request failed");
-if (!opensWith("Watch the trailer", trailer))
+if (!opensWith("Watch the trailer", trailer, "anilist.co"))
   throw new Error("the trailer dialog didn't open with the link");
 console.log("trailer dialog: opens with the link");
+// And AniList again after the trailer: the one dialog must switch back.
+handlers.get("rpc")?.({
+  id: 4,
+  method: "openOnSite",
+  args: ["https://anilist.co/anime/1", "Test"],
+});
+if (!opensWith("Open on AniList", "https://anilist.co/anime/1", trailer))
+  throw new Error("after the trailer, the AniList button still opened the trailer dialog");
+console.log("AniList dialog after the trailer: opens with the link");
 
 // The background first sync runs inside the same runtime, after its start delay.
 const deadline = Date.now() + 10_000;
