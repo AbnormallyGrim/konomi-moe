@@ -8,6 +8,7 @@ import {
   type Media,
   mainGenres,
   makeFilters,
+  scoreAccepts,
   seenAdaptations,
   Themes,
 } from "../src/index.ts";
@@ -68,6 +69,20 @@ describe("country filter", () => {
     expect(filtersActive(f)).toBe(true);
     expect(filterQueryVariables(makeFilters({ countries: ["KR"] })).countryOfOrigin).toBe("KR");
     expect(filterQueryVariables(f).countryOfOrigin).toBeUndefined(); // searched one at a time
+  });
+});
+
+describe("minimum score", () => {
+  it("keeps titles scored at least the minimum, leaves out unscored ones, and searches a point lower", () => {
+    const f = makeFilters({ minScore: 75 });
+    const scored = (averageScore: number | null) => makeMedia(1, [], [], { averageScore });
+    expect(scoreAccepts(f, scored(75))).toBe(true);
+    expect(scoreAccepts(f, scored(74))).toBe(false);
+    expect(scoreAccepts(f, scored(null))).toBe(false);
+    expect(scoreAccepts(makeFilters(), scored(null))).toBe(true);
+    expect(filtersActive(f)).toBe(false); // alone it would only fetch AniList's top-scored titles
+    expect(filterQueryVariables(f).averageScoreGreater).toBe(74);
+    expect(filterQueryVariables(makeFilters()).averageScoreGreater).toBeUndefined();
   });
 });
 

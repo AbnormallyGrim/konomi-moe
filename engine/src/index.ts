@@ -31,8 +31,10 @@ export {
   KEY_STAFF_ROLES,
   type Person,
   parseDetails,
+  parseTrailer,
   type StaffMember,
   type TitleDetails,
+  type Trailer,
 } from "./details.ts";
 export {
   blocks,
@@ -59,6 +61,7 @@ export {
   SEEN,
   type SeenAdaptations,
   STATUSES,
+  scoreAccepts,
   seenAdaptations,
   VERSIONS,
 } from "./filters.ts";
@@ -93,6 +96,7 @@ export {
   buildProfile,
   candidateSources,
   discoveryTags,
+  FINISHED,
   HIDDEN_REASONS,
   type Profile,
   type RankOptions,
@@ -100,6 +104,8 @@ export {
   type Recommendation,
   rank,
   type SourceOptions,
+  seriesStart,
+  seriesStarts,
   UNFINISHED,
 } from "./recommend.ts";
 export { fitRidge, predictRow, type RidgeFit, type SparseRow, solveSpd } from "./ridge.ts";

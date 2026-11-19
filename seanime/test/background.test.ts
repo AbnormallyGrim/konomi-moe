@@ -56,6 +56,7 @@ function plugin(opts: { saved?: string; anime?: Collection | null } = {}) {
     storageSet: (k: string, v: unknown) => storage.set(k, v),
     navigate: () => {},
     showLink: () => {},
+    showTrailer: () => {},
   };
   let setup: BackgroundSetup | null = null;
   const h = handlers(api, () => setup?.status() ?? { running: false });

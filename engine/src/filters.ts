@@ -32,6 +32,11 @@ export interface Filters {
   hideListed: boolean;
   /** Leave out other versions of titles the user finished or dropped in the other type. */
   hideSeenAdaptations: boolean;
+  /**
+   * Lowest AniList average score (0-100, as the cards show it); 0 means any. Titles without a
+   * score yet are left out while it's set.
+   */
+  minScore: number;
   /** Countries of origin (AniList codes such as JP, KR, CN, TW); empty means any. */
   countries: string[];
   /**
@@ -58,6 +63,7 @@ export function makeFilters(given: Partial<Filters> & { finishedOnly?: boolean }
     statuses: finishedOnly ? ["FINISHED"] : [],
     hideListed: true,
     hideSeenAdaptations: false,
+    minScore: 0,
     countries: [],
     exclude: [],
     ...rest,
@@ -74,7 +80,11 @@ export function requiredLabels(f: Filters): Set<string> {
   ]);
 }
 
-/** Whether any title filter is set; `mainTheme`, `minTagRank` and the list-based flags alone don't count. */
+/**
+ * Whether any title filter is set; `mainTheme`, `minTagRank`, `minScore` and the list-based flags
+ * alone don't count. A minimum score alone would make the filter search return AniList's
+ * top-scored titles, which says nothing about the user's taste.
+ */
 export function filtersActive(f: Filters): boolean {
   return Boolean(
     f.genres.length ||
@@ -102,6 +112,11 @@ export function filterAccepts(f: Filters, m: Media, themes: Themes): boolean {
   );
 }
 
+/** Whether a title meets the minimum score; applied to every candidate, filters active or not. */
+export function scoreAccepts(f: Filters, m: Media): boolean {
+  return !f.minScore || (m.averageScore !== null && m.averageScore >= f.minScore);
+}
+
 /**
  * The chosen genres that must be the main theme. Supporting genres (Comedy, Drama, Slice of
  * Life…) sit alongside a plot-driving one, so with one of those chosen they need only be
@@ -126,6 +141,9 @@ export function filterQueryVariables(f: Filters): Record<string, unknown> {
   if (f.yearFrom) v.startGreater = f.yearFrom * 10000;
   if (f.yearTo) v.startLesser = f.yearTo * 10000 + 1231;
   if (f.statuses.length) v.statusIn = [...f.statuses];
+  // AniList compares unrounded scores, so "greater than 84" returns titles shown as 84%. One
+  // point lower never misses a title; scoreAccepts then checks the score as shown.
+  if (f.minScore) v.averageScoreGreater = f.minScore - 1;
   // AniList takes one country per search; with several, the pipeline searches each in turn.
   if (f.countries.length === 1) v.countryOfOrigin = f.countries[0];
   return v;

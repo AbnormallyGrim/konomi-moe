@@ -45,6 +45,64 @@ describe("rank", () => {
     expect(cosy?.sources).toEqual(["liked Test Show 1"]);
   });
 
+  it("recommends a sequel only after a finished prequel", () => {
+    const statuses = [
+      "COMPLETED",
+      "REPEATING",
+      "PLANNING",
+      "CURRENT",
+      "PAUSED",
+      "DROPPED",
+    ] as const;
+    const prequels = statuses.map((_, i) => makeMedia(40 + i, ["Iyashikei"], ["Slice of Life"]));
+    const sequels = statuses.map((_, i) =>
+      makeMedia(50 + i, ["Iyashikei"], ["Slice of Life"], { relations: [rel("PREQUEL", 40 + i)] }),
+    );
+    const { entries, map } = setup([...prequels, ...sequels]);
+    const profile = buildProfile(
+      [...entries, ...statuses.map((s, i) => entry(40 + i, s, 0, { progress: 1 }))],
+      map,
+    );
+    const links: [number, number, number][] = statuses.map((_, i) => [1, 50 + i, 5]);
+    const ids = new Set(
+      rank(profile, candidateSources(profile, links), map).map((r) => r.media.id),
+    );
+
+    expect(ids).toEqual(new Set([50, 51])); // sequels of completed and rewatched seasons only
+  });
+
+  it("swaps a sequel of an unwatched season for its first unwatched season", () => {
+    const show = (id: number, prequel?: number, title?: string) =>
+      makeMedia(id, ["Iyashikei"], ["Slice of Life"], {
+        relations: prequel ? [rel("PREQUEL", prequel)] : [],
+        ...(title ? { title } : {}),
+      });
+    const { entries, map, lookup } = setup([
+      show(60, undefined, "Season 1"),
+      show(61, 60),
+      show(62, 61), // season 3 of an unwatched season 1 → season 1
+      show(70),
+      show(71, 70, "Next Season"),
+      show(72, 71), // season 3 after a finished season 1 → season 2
+      show(81, 80), // season 1 not cached → dropped
+      show(91, 90), // season 1 on the list, dropped → dropped
+    ]);
+    const profile = buildProfile(
+      [...entries, entry(70, "COMPLETED", 80), entry(90, "DROPPED", 0, { progress: 1 })],
+      map,
+    );
+    const links: [number, number, number][] = [
+      [1, 62, 9], [1, 61, 5], [1, 72, 5], [1, 81, 5], [1, 91, 5],
+    ]; // biome-ignore format: compact link table
+    const recs = new Map(
+      rank(profile, candidateSources(profile, links), map, { lookup }).map((r) => [r.media.id, r]),
+    );
+
+    expect(recs.has(60) && recs.has(71)).toBe(true);
+    for (const id of [61, 62, 72, 81, 91]) expect(recs.has(id)).toBe(false);
+    expect(recs.get(60)?.sources).toEqual(["liked Test Show 1"]);
+  });
+
   it("adds only unfinished list titles when asked", () => {
     const statuses = [
       ["PLANNING", 24],

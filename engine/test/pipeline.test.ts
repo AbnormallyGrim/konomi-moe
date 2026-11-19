@@ -210,6 +210,25 @@ describe("tagCategories and loadExclusions", () => {
 });
 
 describe("run", () => {
+  it("fetches an unwatched first season and recommends it instead of its sequel", async () => {
+    const store = new MemoryStore();
+    const fake = user();
+    fake.catalog.set(
+      101,
+      node(101, {
+        relations: { edges: [{ relationType: "PREQUEL", node: { id: 300, type: "ANIME" } }] },
+      }),
+    );
+    fake.catalog.set(300, node(300));
+    const { client } = fakeClient(fake);
+    await syncList(client, store, "someone", "ANIME");
+    const result = await run(store, client, "someone", "ANIME");
+    const recs = new Map(result.recommendations.map((r) => [r.media.id, r]));
+
+    expect(recs.has(101)).toBe(false);
+    expect(recs.get(300)?.sources).toEqual(["liked Tesuto 1"]);
+  });
+
   it("pages filter searches until enough pass, one search per chosen country", async () => {
     const store = new MemoryStore();
     let next = 5000;
@@ -277,6 +296,38 @@ describe("run", () => {
     expect(ids.length).toBe(6);
     expect(ids.every((id) => id > 100 && id < 200)).toBe(true);
     expect(result.recommendations[0]?.sources[0]).toMatch(/^liked Tesuto/);
+  });
+
+  it("leaves out candidates below the minimum score and asks AniList for scored titles only", async () => {
+    const store = new MemoryStore();
+    const fake = user();
+    for (const [id, averageScore] of [
+      [101, 90],
+      [102, 70],
+      [103, null],
+    ] as const)
+      fake.catalog.set(id, node(id, { averageScore }));
+    const { client } = fakeClient(fake);
+    await syncList(client, store, "someone", "ANIME");
+    const filters = makeFilters({ minScore: 80 });
+    const offline = await run(
+      store,
+      null,
+      "someone",
+      "ANIME",
+      makeRunOptions({ discover: false, filters }),
+    );
+    const ids = offline.recommendations.map((r) => r.media.id);
+    expect(ids).toContain(101);
+    expect(ids).not.toContain(102); // 70%
+    expect(ids).not.toContain(103); // no score yet
+    expect(ids).not.toContain(104); // the fake's default 75%
+
+    const searched = fakeClient({ ...fake, discover: () => [] });
+    await run(store, searched.client, "someone", "ANIME", makeRunOptions({ filters }));
+    const searches = searched.requests.filter((r) => r.kind === "discover");
+    expect(searches.length).toBeGreaterThan(0);
+    for (const r of searches) expect(r.variables.averageScoreGreater).toBe(79);
   });
 
   it("searches per liked tag and by filters, honours exclusions, and warns about unsynced lists", async () => {

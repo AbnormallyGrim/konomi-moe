@@ -656,6 +656,13 @@ main {
   background: color-mix(in srgb, var(--surface-2) 40%, var(--surface));
   border-radius: 0 0 var(--radius) var(--radius);
 }
+/* Two rows shared by both columns (subgrid): the sliders sit in the second, side by side. */
+.adv-col {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  align-content: start;
+}
 .adv-body .hint {
   font-size: 0.75rem;
   color: var(--faint);
@@ -789,9 +796,6 @@ main {
   margin-left: 0.1rem;
   border-radius: 50%;
   background: #fff;
-}
-.tagmin {
-  margin-top: 0.9rem;
 }
 .tagmin-head {
   display: flex;
@@ -1112,7 +1116,12 @@ body {
   gap: 1.6rem;
   padding: 1.6rem 1.6rem 1.2rem;
 }
-.dtop > img {
+.dcover {
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+.dcover > img {
   width: 100%;
   aspect-ratio: 2 / 3;
   object-fit: cover;
@@ -1524,8 +1533,11 @@ dialog.drawer {
   .dtop {
     grid-template-columns: 1fr;
   }
-  .dtop > img {
+  .dcover > img {
     width: 160px;
+  }
+  .dcover .trailer {
+    max-width: 280px;
   }
   .actions {
     grid-template-columns: 1fr 1fr;
@@ -1889,4 +1901,74 @@ button.tab.on {
 }
 .driver-popover.tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow {
   border-bottom-color: var(--surface);
+}
+
+/* The trailer under the cover in a title's dialog. It opens the video rather than embedding it:
+   Seanime's sandboxed frame blocks embedded players. YouTube's thumbnail is 4:3 with black
+   bars; covering a 16:9 box crops them off. */
+.trailer {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-3) center / cover no-repeat;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
+}
+.trailer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 45%);
+}
+.trailer:hover {
+  filter: brightness(1.1);
+}
+.trailer:active {
+  transform: scale(0.99);
+}
+.trailer:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.tr-play {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  background: rgba(13, 15, 20, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.tr-play::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  border-style: solid;
+  border-width: 9px 0 9px 14px;
+  border-color: transparent transparent transparent #fff;
+}
+.trailer:hover .tr-play {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tr-tag {
+  position: absolute;
+  z-index: 1;
+  left: 0.7rem;
+  bottom: 0.55rem;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }

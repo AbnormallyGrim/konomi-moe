@@ -41,8 +41,8 @@ if (!/^\d+\.\d+\.\d+$/.test(manifest.version)) throw new Error("version isn't x.
 if (manifest.type !== "plugin" || manifest.plugin?.version !== "1")
   throw new Error("bad plugin manifest");
 console.log("manifest checks: ok");
-let modalRender: (() => unknown[]) | null = null;
-let modalOpened = false;
+/** The plugin's dialogs by title: what each renders, and whether it was opened. */
+const modals = new Map<string, { render: (() => unknown[]) | null; opened: boolean }>();
 const handlers = new Map<string, (p: unknown) => void>();
 const sent: unknown[] = [];
 let options: unknown;
@@ -134,13 +134,15 @@ const ctx = {
       text: () => JSON.stringify({ data }),
     };
   },
-  newModal: () => {
+  newModal: (opts: { title: string }) => {
+    const state = { render: null as (() => unknown[]) | null, opened: false };
+    modals.set(opts.title, state);
     const m = {
       render: (fn: () => unknown[]) => {
-        modalRender = fn;
+        state.render = fn;
       },
       open: () => {
-        modalOpened = true;
+        state.opened = true;
       },
       close: () => {},
       update: () => {},
@@ -180,12 +182,20 @@ handlers.get("rpc")?.({
   args: ["https://anilist.co/anime/1", "Test"],
 });
 if (!(sent.at(-1) as { ok?: boolean })?.ok) throw new Error("the AniList request failed");
-// Assigned inside the stubbed modal, which TypeScript can't see, so widen it again here.
-const render = modalRender as (() => unknown[]) | null;
-const dialog = JSON.stringify(render?.() ?? null);
-if (!modalOpened || !dialog.includes("https://anilist.co/anime/1"))
+/** Whether the dialog with this title was opened and shows `link`. */
+const opensWith = (title: string, link: string) => {
+  const m = modals.get(title);
+  return Boolean(m?.opened && JSON.stringify(m.render?.() ?? null).includes(link));
+};
+if (!opensWith("Open on AniList", "https://anilist.co/anime/1"))
   throw new Error("the AniList dialog didn't open with the link");
-console.log("AniList dialog:", modalOpened ? "opens with the link" : "missing");
+console.log("AniList dialog: opens with the link");
+const trailer = "https://www.youtube.com/watch?v=tR8YH0G67Rk";
+handlers.get("rpc")?.({ id: 3, method: "openTrailer", args: [trailer, "Test"] });
+if (!(sent.at(-1) as { ok?: boolean })?.ok) throw new Error("the trailer request failed");
+if (!opensWith("Watch the trailer", trailer))
+  throw new Error("the trailer dialog didn't open with the link");
+console.log("trailer dialog: opens with the link");
 
 // The background first sync runs inside the same runtime, after its start delay.
 const deadline = Date.now() + 10_000;

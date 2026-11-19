@@ -20,6 +20,7 @@ import {
   makeFilters,
   requiredLabels,
   type SeenAdaptations,
+  scoreAccepts,
   seenAdaptations,
 } from "./filters.ts";
 import { type ListEntry, type Media, type MediaType, otherType, prequelIds } from "./models.ts";
@@ -195,7 +196,7 @@ export async function run(
   const links = await store.recommendationsFrom(profile.likedIds);
   const sources = candidateSources(profile, links, { extra, includeListed: !filters.hideListed });
   await load(store, cache, sources.keys());
-  await loadPrequelChains(store, cache, sources.keys());
+  await loadPrequelChains(store, cache, sources.keys(), online, warnings);
 
   let seen: SeenAdaptations | null = null;
   if (filters.hideSeenAdaptations) {
@@ -213,6 +214,7 @@ export async function run(
   const active = filtersActive(filters);
   const accept = (m: Media) =>
     (!active || filterAccepts(filters, m, themes)) &&
+    scoreAccepts(filters, m) &&
     !(seen && blocksSeen(seen, m)) &&
     !(listed && blocksSeen(listed, m));
   let recs = rank(profile, sources, cache, {
@@ -301,21 +303,38 @@ async function load(
   for (const [id, m] of await store.getMedia(todo)) cache.set(id, m);
 }
 
-/** Load each candidate's cached prequels, link by link, so excluded series can be traced. */
+/**
+ * Load each candidate's prequels, link by link, so excluded series can be traced and a sequel
+ * of an unwatched season can be swapped for its first season. A client fetches uncached ones.
+ */
 async function loadPrequelChains(
   store: Store,
   cache: Map<number, Media>,
   start: Iterable<number>,
+  client: AniListClient | null,
+  warnings: string[],
 ): Promise<void> {
-  let frontier = new Set(start);
+  const seen = new Set(start);
+  let frontier = new Set(seen);
   for (let i = 0; i < MAX_CHAIN && frontier.size; i++) {
     const next = new Set<number>();
     for (const id of frontier) {
       const m = cache.get(id);
-      if (m) for (const p of prequelIds(m)) if (!cache.has(p)) next.add(p);
+      if (m) for (const p of prequelIds(m)) if (!seen.has(p)) next.add(p);
+    }
+    if (!next.size) break;
+    if (client) {
+      try {
+        await fetchMedia(client, store, next);
+      } catch (e) {
+        if (!(e instanceof AniListError)) throw e;
+        warnings.push(`first seasons of some sequels may be missed: ${e.message}`);
+        client = null;
+      }
     }
     await load(store, cache, next);
-    frontier = new Set([...next].filter((id) => cache.has(id)));
+    for (const id of next) seen.add(id);
+    frontier = next;
   }
 }
 

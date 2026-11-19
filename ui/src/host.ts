@@ -4,7 +4,7 @@
  * channel.
  */
 
-import type { ListEntry, Media, MediaType, Transport } from "@konomi/engine";
+import type { ListEntry, Media, MediaType, Trailer, Transport } from "@konomi/engine";
 
 /** The signed-in user. */
 export interface HostUser {
@@ -48,4 +48,6 @@ export interface Host {
    * itself; Seanime's sandboxed frame can't, so the plugin shows a Seanime dialog with the link.
    */
   openOnSite?(media: Media): Promise<void>;
+  /** Opens a title's trailer in the browser; without it the page opens the link itself. */
+  openTrailer?(media: Media, trailer: Trailer): Promise<void>;
 }

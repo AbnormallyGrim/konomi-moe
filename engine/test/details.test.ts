@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KEY_STAFF_ROLES, parseDetails } from "../src/index.ts";
+import { KEY_STAFF_ROLES, parseDetails, parseTrailer } from "../src/index.ts";
 
 describe("parseDetails", () => {
   it("keeps characters with voice actors, and key staff once with all their roles", () => {
@@ -39,6 +39,28 @@ describe("parseDetails", () => {
   });
 
   it("copes with a title that has none of them", () => {
-    expect(parseDetails({})).toEqual({ description: "", characters: [], staff: [] });
+    expect(parseDetails({})).toEqual({ description: "", trailer: null, characters: [], staff: [] });
+  });
+
+  it("links YouTube and Dailymotion trailers and refuses anything else", () => {
+    expect(parseTrailer({ id: "tR8YH0G67Rk", site: "youtube", thumbnail: null })).toEqual({
+      site: "youtube",
+      url: "https://www.youtube.com/watch?v=tR8YH0G67Rk",
+      thumbnail: "https://i.ytimg.com/vi/tR8YH0G67Rk/hqdefault.jpg",
+    });
+    expect(
+      parseTrailer({ id: "x8abc", site: "dailymotion", thumbnail: "https://s2.dmcdn.net/x.jpg" }),
+    ).toEqual({
+      site: "dailymotion",
+      url: "https://www.dailymotion.com/video/x8abc",
+      thumbnail: "https://s2.dmcdn.net/x.jpg",
+    });
+    expect(parseTrailer({ id: "abc", site: "vimeo" })).toBeNull();
+    expect(parseTrailer({ id: "a?b=c", site: "youtube" })).toBeNull();
+    expect(parseTrailer({ id: "abc", site: "youtube", thumbnail: "javascript:x" })?.thumbnail).toBe(
+      "https://i.ytimg.com/vi/abc/hqdefault.jpg",
+    );
+    expect(parseTrailer(null)).toBeNull();
+    expect(parseDetails({}).trailer).toBeNull();
   });
 });
