@@ -44,7 +44,7 @@ npm run build -w extension
 - **Chrome, Edge, Brave, Opera, Vivaldi:** open `chrome://extensions`, turn on Developer mode, choose **Load unpacked** and pick `extension/dist/chrome`.
 - **Firefox:** open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on** and pick `extension/dist/firefox/manifest.json`.
 
-The app opens in a tab. Choose **Sign in with AniList** and approve Konomi.moe on AniList, the way MAL-Sync connects. Your browser first asks to let the extension read anilist.co, so it can catch AniList's answer. If you say no, paste the code AniList shows instead.
+The app opens in a tab. Choose **Sign in with AniList** and approve Konomi.moe on AniList. Your browser first asks to let the extension read anilist.co, so it can catch AniList's answer. If you say no, paste the code AniList shows instead.
 
 Sign-in needs an AniList API client, registered once at [anilist.co/settings/developer](https://anilist.co/settings/developer) with the redirect URL `https://anilist.co/api/v2/oauth/pin`. Put its ID in `ANILIST_CLIENT_ID` in `extension/scripts/build.ts`, or build with `ANILIST_CLIENT_ID=<id>`. One client serves every browser.
 
