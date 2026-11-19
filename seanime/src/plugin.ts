@@ -47,10 +47,15 @@ export interface Api {
   navigate(path: string, params: Record<string, string>): void;
   /** Shows a link in Seanime's own dialog, where links can open the browser. */
   showLink(url: string, title: string): void;
+  /** Shows a trailer link in its own dialog, the same way. */
+  showTrailer(url: string, title: string): void;
 }
 
 /** Only these links are shown: the page asks for a title's AniList page, nothing else. */
 const SITE_LINK = /^https:\/\/anilist\.co\//;
+/** Trailer links, as the engine builds them from AniList (see parseTrailer). */
+const TRAILER_LINK =
+  /^https:\/\/www\.(youtube\.com\/watch\?v=|dailymotion\.com\/video\/)[\w-]{1,32}$/;
 
 type Handlers = { [M in Method]: (...args: Methods[M]["args"]) => Methods[M]["result"] };
 
@@ -90,6 +95,11 @@ export function handlers(
     openOnSite: (url, title) => {
       if (!SITE_LINK.test(url)) throw new Error("only AniList links can be opened");
       api.showLink(url, title);
+      return null;
+    },
+    openTrailer: (url, title) => {
+      if (!TRAILER_LINK.test(url)) throw new Error("only YouTube and Dailymotion trailers open");
+      api.showTrailer(url, title);
       return null;
     },
     setupStatus,
@@ -164,6 +174,20 @@ function seanimeApi(ctx: SeanimeContext): Api {
       { gap: 3 },
     ),
   ]);
+  const trailer = { url: "", title: "" };
+  const trailerModal = ctx.newModal({ title: "Watch the trailer" });
+  trailerModal.render(() => [
+    trailerModal.stack(
+      [
+        trailerModal.text(`${trailer.title}'s trailer opens in your browser.`),
+        trailerModal.anchor(
+          trailer.url.includes("dailymotion") ? "Watch on Dailymotion" : "Watch on YouTube",
+          { href: trailer.url, target: "_blank" },
+        ),
+      ],
+      { gap: 3 },
+    ),
+  ]);
   return {
     collection: (type) =>
       (type === "MANGA"
@@ -181,6 +205,11 @@ function seanimeApi(ctx: SeanimeContext): Api {
       link.url = url;
       link.title = title;
       modal.open();
+    },
+    showTrailer: (url, title) => {
+      trailer.url = url;
+      trailer.title = title;
+      trailerModal.open();
     },
   };
 }

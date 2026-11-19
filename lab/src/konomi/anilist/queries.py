@@ -101,6 +101,7 @@ query (
   $startLesser: FuzzyDateInt
   $statusIn: [MediaStatus]
   $countryOfOrigin: CountryCode
+  $averageScoreGreater: Int
 ) {
   Page(page: $page, perPage: $perPage) {
     media(
@@ -116,6 +117,7 @@ query (
       startDate_lesser: $startLesser
       status_in: $statusIn
       countryOfOrigin: $countryOfOrigin
+      averageScore_greater: $averageScoreGreater
       isAdult: false
       sort: SCORE_DESC
     ) { ...MediaFields }
@@ -129,12 +131,13 @@ VIEWER = "query { Viewer { id name } }"
 
 MEDIA_DESCRIPTION = "query ($id: Int) { Media(id: $id) { description(asHtml: false) } }"
 
-# What a title's details dialog shows: synopsis, main cast first with their Japanese voice
-# actors, and staff (the app keeps the key roles). One request when a card is opened.
+# What a title's details dialog shows: synopsis, trailer, main cast first with their Japanese
+# voice actors, and staff (the app keeps the key roles). One request when a card is opened.
 MEDIA_DETAILS = """
 query ($id: Int) {
   Media(id: $id) {
     description(asHtml: false)
+    trailer { id site thumbnail }
     characters(sort: [ROLE, RELEVANCE, ID], perPage: 12) {
       edges {
         role

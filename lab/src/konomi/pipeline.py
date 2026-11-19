@@ -127,6 +127,18 @@ def run(
             and not (listed and listed.blocks(m))
         )
 
+    fetching = online
+
+    def fetch(ids: set[int]) -> None:
+        nonlocal fetching
+        if not fetching:
+            return
+        try:
+            fetch_media(fetching, store, ids)
+        except AniListError as e:
+            warnings.append(f"first seasons of some sequels may be missed: {e}")
+            fetching = None
+
     recs = recommend(
         store,
         profile,
@@ -136,6 +148,7 @@ def run(
         excluded,
         accept,
         include_listed=not filters.hide_listed,
+        fetch=fetch,
     )
     if online:
         recs = _fill_details(online, store, recs, warnings)

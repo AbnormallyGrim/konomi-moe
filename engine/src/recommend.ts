@@ -1,6 +1,6 @@
 /** Builds a taste profile and ranks candidates with it. Mirrors the lab's recommend.py. */
 
-import { blocks, type Exclusions, type MediaLookup } from "./exclusions.ts";
+import { blocks, type Exclusions, MAX_CHAIN, type MediaLookup } from "./exclusions.ts";
 import { type ListEntry, type ListStatus, type Media, prequelIds } from "./models.ts";
 import {
   communityWeight,
@@ -18,6 +18,11 @@ export const UNFINISHED: ReadonlyMap<ListStatus, string> = new Map([
   ["CURRENT", "in progress on your list"],
   ["PAUSED", "paused on your list"],
 ]);
+/**
+ * A sequel is recommended only when every prequel is one of these: never after a planned,
+ * in-progress, paused or dropped season.
+ */
+export const FINISHED: ReadonlySet<ListStatus> = new Set(["COMPLETED", "REPEATING"]);
 /** Features that are true but uninformative as reasons. */
 export const HIDDEN_REASONS = ["format:", "decade:"];
 
@@ -127,12 +132,62 @@ export function candidateSources(
   return sources;
 }
 
+/**
+ * The title to recommend in place of `media`: itself when every prequel is finished, else its
+ * first unwatched season, found by walking back through prequels not on the list. `null` when a
+ * prequel is on the list unfinished (planned, in progress, paused or dropped) or the chain
+ * can't be followed through the cache.
+ */
+export function seriesStart(
+  media: Media,
+  statuses: ReadonlyMap<number, ListStatus>,
+  lookup: MediaLookup,
+): number | null {
+  let current = media;
+  const seen = new Set([media.id]);
+  for (let i = 0; i < MAX_CHAIN; i++) {
+    const prequels = prequelIds(current);
+    if (prequels.every((p) => FINISHED.has(statuses.get(p) as ListStatus))) return current.id;
+    if (prequels.some((p) => statuses.has(p) && !FINISHED.has(statuses.get(p) as ListStatus)))
+      return null;
+    const unlisted = prequels.filter((p) => !statuses.has(p) && !seen.has(p)).sort((a, b) => a - b);
+    const next = unlisted.length ? lookup(unlisted.slice(0, 1)).values().next().value : undefined;
+    if (!next) return null;
+    current = next;
+    seen.add(current.id);
+  }
+  return null;
+}
+
+/**
+ * `sources` with each sequel moved to `seriesStart`, its sources joining that title's; sequels
+ * with no title to recommend are dropped. Uncached and listed candidates are kept as they are;
+ * ranking judges them by their own prequels.
+ */
+export function seriesStarts(
+  sources: ReadonlyMap<number, string[]>,
+  statuses: ReadonlyMap<number, ListStatus>,
+  lookup: MediaLookup,
+): Map<number, string[]> {
+  const media = lookup(sources.keys());
+  const moved = new Map<number, string[]>();
+  for (const [id, found] of sources) {
+    const m = media.get(id);
+    const target = !m || statuses.has(id) ? id : seriesStart(m, statuses, lookup);
+    if (target === null) continue;
+    const into = moved.get(target) ?? [];
+    for (const s of found) if (!into.includes(s)) into.push(s);
+    moved.set(target, into);
+  }
+  return moved;
+}
+
 /** Options for `rank`. */
 export interface RankOptions {
   limit?: number;
   includeAdult?: boolean;
   exclusions?: Exclusions;
-  /** Cache lookup, for following excluded titles' sequel chains. */
+  /** Cache lookup, for following excluded titles' sequel chains and sequels' prequels. */
   lookup?: MediaLookup;
   /** Extra filter, such as the user's filters. */
   accept?: (m: Media) => boolean;
@@ -148,9 +203,21 @@ export function rank(
 ): Recommendation[] {
   const statuses = new Map(profile.entries.map((e) => [e.mediaId, e.status]));
   const lookup = options.lookup ?? (() => new Map());
+  const find: MediaLookup = (ids) => {
+    const found = new Map<number, Media>();
+    const rest: number[] = [];
+    for (const id of ids) {
+      const m = media.get(id);
+      if (m) found.set(id, m);
+      else rest.push(id);
+    }
+    for (const [id, m] of lookup(rest)) found.set(id, m);
+    return found;
+  };
+  const moved = seriesStarts(sources, statuses, find);
   const candidates: Media[] = [];
-  for (const id of sources.keys()) {
-    const m = media.get(id);
+  for (const id of moved.keys()) {
+    const m = find([id]).get(id);
     if (!m) continue;
     const status = statuses.get(m.id);
     const listedOk =
@@ -158,7 +225,7 @@ export function rank(
     if (
       listedOk &&
       (options.includeAdult || !m.isAdult) &&
-      prequelIds(m).every((p) => statuses.has(p)) &&
+      prequelIds(m).every((p) => FINISHED.has(statuses.get(p) as ListStatus)) &&
       !(options.exclusions && blocks(options.exclusions, m, lookup)) &&
       (!options.accept || options.accept(m))
     ) {
@@ -182,7 +249,7 @@ export function rank(
       media: m,
       score: (predicted[i] ?? 0) + profile.communityWeight * community,
       reasons,
-      sources: sources.get(m.id) ?? [],
+      sources: moved.get(m.id) ?? [],
     };
   });
   return ranked.sort((a, b) => b.score - a.score).slice(0, options.limit ?? 20);

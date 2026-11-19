@@ -18,6 +18,7 @@ export interface Methods {
   addToPlanning: { args: [id: number, type: MediaType]; result: null };
   openTitle: { args: [id: number, type: MediaType]; result: null };
   openOnSite: { args: [url: string, title: string]; result: null };
+  openTrailer: { args: [url: string, title: string]; result: null };
   setupStatus: { args: []; result: SetupStatus };
 }
 

@@ -1,6 +1,6 @@
 /** The page side: a `Host` that asks the plugin over Seanime's bridge (`window.webview`). */
 
-import { fetchTransport, type Media } from "@konomi/engine";
+import { fetchTransport, type Media, type Trailer } from "@konomi/engine";
 import type { Host } from "@konomi/ui";
 import { type Method, type Methods, REPLY, REQUEST, type Reply, SEANIME_USER } from "./protocol.ts";
 
@@ -86,6 +86,9 @@ export function seanimeHost(bridge: Bridge, timeoutMs = TIMEOUT_MS, pollMs = SET
     openOnSite: async (media: Media) => {
       const url = media.siteUrl ?? `https://anilist.co/${media.type.toLowerCase()}/${media.id}`;
       await call("openOnSite", url, media.titles?.english ?? media.title);
+    },
+    openTrailer: async (media: Media, trailer: Trailer) => {
+      await call("openTrailer", trailer.url, media.titles?.english ?? media.title);
     },
   };
 }

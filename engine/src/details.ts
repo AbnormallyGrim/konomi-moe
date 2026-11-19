@@ -1,4 +1,4 @@
-/** A title's details for its dialog: synopsis, characters with voice actors, and key staff. */
+/** A title's details for its dialog: synopsis, trailer, characters with voice actors, and key staff. */
 
 /** A person or character with a picture. */
 export interface Person {
@@ -19,8 +19,19 @@ export interface StaffMember extends Person {
   roles: string[];
 }
 
+/** A title's trailer, as a link: Seanime's sandboxed page can't embed players. */
+export interface Trailer {
+  site: "youtube" | "dailymotion";
+  /** The video's page, such as https://www.youtube.com/watch?v=… */
+  url: string;
+  /** A preview image (YouTube's is 4:3 with bars; crop it to 16:9). */
+  thumbnail: string | null;
+}
+
 export interface TitleDetails {
   description: string;
+  /** `null` when AniList has none, or it's on a site we can't link to. */
+  trailer: Trailer | null;
   characters: Character[];
   staff: StaffMember[];
 }
@@ -54,6 +65,7 @@ interface PersonNode {
 /** The `Media` part of a `queries.MEDIA_DETAILS` reply. */
 export interface DetailsNode {
   description?: Maybe<string>;
+  trailer?: Maybe<{ id?: Maybe<string>; site?: Maybe<string>; thumbnail?: Maybe<string> }>;
   characters?: Maybe<{
     edges?: Maybe<
       Maybe<{ role?: Maybe<string>; node?: Maybe<PersonNode>; voiceActors?: Maybe<PersonNode[]> }>[]
@@ -64,6 +76,25 @@ export interface DetailsNode {
 
 function person(n: PersonNode): Person {
   return { id: n.id, name: n.name?.full ?? "", image: n.image?.medium ?? null };
+}
+
+/** Video IDs are letters, digits, `-` and `_`; anything else is refused rather than linked. */
+const VIDEO_ID = /^[\w-]{1,32}$/;
+
+/** AniList's trailer as a link, for the two sites AniList stores. */
+export function parseTrailer(node: DetailsNode["trailer"]): Trailer | null {
+  const id = node?.id ?? "";
+  if (!VIDEO_ID.test(id)) return null;
+  const thumbnail = node?.thumbnail?.startsWith("https://") ? node.thumbnail : null;
+  if (node?.site === "youtube")
+    return {
+      site: "youtube",
+      url: `https://www.youtube.com/watch?v=${id}`,
+      thumbnail: thumbnail ?? `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    };
+  if (node?.site === "dailymotion")
+    return { site: "dailymotion", url: `https://www.dailymotion.com/video/${id}`, thumbnail };
+  return null;
 }
 
 /** "Director (eps 1-12)" → "Director". */
@@ -90,5 +121,10 @@ export function parseDetails(node: DetailsNode): TitleDetails {
       staff.set(e.node.id, { ...person(e.node), roles: [role] });
     }
   }
-  return { description: node.description ?? "", characters, staff: [...staff.values()] };
+  return {
+    description: node.description ?? "",
+    trailer: parseTrailer(node.trailer),
+    characters,
+    staff: [...staff.values()],
+  };
 }

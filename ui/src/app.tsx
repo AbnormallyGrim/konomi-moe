@@ -14,6 +14,7 @@ import {
   STATUSES,
   type Theme,
   type TitleDetails,
+  type Trailer,
 } from "@konomi/engine";
 import type { ComponentChildren } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
@@ -773,6 +774,7 @@ function advancedCount(f: Filters): number {
     f.tags.length +
     f.countries.length +
     (f.minTagRank && f.tags.length ? 1 : 0) +
+    (f.minScore ? 1 : 0) +
     (f.hideListed ? 0 : 1) +
     (f.hideSeenAdaptations ? 1 : 0)
   );
@@ -904,6 +906,15 @@ function FiltersPanel(props: {
       statusName(s),
       () => setF({ ...f, statuses: toggle(f.statuses, s) }),
     ]),
+    ...(f.minScore
+      ? [
+          ["score", `Score ${f.minScore}%+`, () => setF({ ...f, minScore: 0 })] as [
+            string,
+            string,
+            () => void,
+          ],
+        ]
+      : []),
     ...f.tags.map((t): [string, string, () => void] => [
       `tag:${t}`,
       t,
@@ -1130,46 +1141,52 @@ function FiltersPanel(props: {
       </div>
       {props.advancedOpen && (
         <div class="adv-body">
-          <div>
-            <div class="label">Tags</div>
-            <TagPicker
-              session={props.session}
-              kind={props.kind}
-              version={props.version}
-              chosen={f.tags}
-              blocked={blacklisted}
-              onChange={(tags) => setF({ ...f, tags })}
-            />
+          {/* Each column is a two-row subgrid, so the two sliders share a row and line up. */}
+          <div class="adv-col">
+            <div>
+              <div class="label">Tags</div>
+              <TagPicker
+                session={props.session}
+                kind={props.kind}
+                version={props.version}
+                chosen={f.tags}
+                blocked={blacklisted}
+                onChange={(tags) => setF({ ...f, tags })}
+              />
+            </div>
             <TagRank
               value={f.minTagRank}
               active={f.tags.length > 0}
               onChange={(minTagRank) => setF({ ...f, minTagRank })}
             />
           </div>
-          <div>
-            <div class="label">Country of origin</div>
-            <div class="pills">
-              {COUNTRIES.map(([code, name]) =>
-                pill(`country:${code}`, f.countries.includes(code), name, () =>
-                  setF({ ...f, countries: toggle(f.countries, code) }),
-                ),
-              )}
+          <div class="adv-col">
+            <div>
+              <div class="label">Country of origin</div>
+              <div class="pills">
+                {COUNTRIES.map(([code, name]) =>
+                  pill(`country:${code}`, f.countries.includes(code), name, () =>
+                    setF({ ...f, countries: toggle(f.countries, code) }),
+                  ),
+                )}
+              </div>
+              <div class="label" style="margin-top:1rem">
+                Your list
+              </div>
+              <div class="toggles">
+                <Toggle
+                  label="Hide my titles"
+                  checked={f.hideListed}
+                  onChange={(v) => setF({ ...f, hideListed: v })}
+                />
+                <Toggle
+                  label={`Hide titles on my ${listWord} list`}
+                  checked={f.hideSeenAdaptations}
+                  onChange={(v) => setF({ ...f, hideSeenAdaptations: v })}
+                />
+              </div>
             </div>
-            <div class="label" style="margin-top:1rem">
-              Your list
-            </div>
-            <div class="toggles">
-              <Toggle
-                label="Hide my titles"
-                checked={f.hideListed}
-                onChange={(v) => setF({ ...f, hideListed: v })}
-              />
-              <Toggle
-                label={`Hide titles on my ${listWord} list`}
-                checked={f.hideSeenAdaptations}
-                onChange={(v) => setF({ ...f, hideSeenAdaptations: v })}
-              />
-            </div>
+            <ScoreMin value={f.minScore} onChange={(minScore) => setF({ ...f, minScore })} />
           </div>
         </div>
       )}
@@ -1307,6 +1324,46 @@ function TagRank(props: { value: number; active: boolean; onChange: (v: number) 
         {props.active
           ? "Only count a tag where AniList ranks it at least this relevant to the title."
           : "Applies once you pick a tag."}
+      </div>
+    </div>
+  );
+}
+
+/** The lowest AniList average score to show, in Advanced beside the tag percentage. */
+function ScoreMin(props: { value: number; onChange: (v: number) => void }) {
+  const on = props.value > 0;
+  return (
+    <div class={`tagmin ${on ? "on" : ""}`}>
+      <div class="tagmin-head">
+        <span>Minimum AniList score</span>
+        <b>{on ? `${props.value}%+` : "Off"}</b>
+        {on && (
+          <button type="button" class="linkish muted" onClick={() => props.onChange(0)}>
+            Turn off
+          </button>
+        )}
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={props.value}
+        aria-label="Minimum AniList score"
+        aria-valuetext={on ? `${props.value}% or more` : "Off"}
+        style={{ "--p": `${props.value}%` }}
+        onInput={(e) => props.onChange(Number((e.target as HTMLInputElement).value))}
+      />
+      <div class="tagmin-ticks">
+        <span>Off</span>
+        <span>25%</span>
+        <span>50%</span>
+        <span>75%</span>
+        <span>100%</span>
+      </div>
+      <div class="hint">
+        Only titles AniList's users average at least this high; titles without a score yet are left
+        out.
       </div>
     </div>
   );
@@ -1491,7 +1548,25 @@ function Details(props: {
           ✕
         </button>
         <div class="dtop">
-          {m.coverUrl ? <img src={m.coverUrl} alt="" /> : <div />}
+          <div class="dcover">
+            {m.coverUrl ? <img src={m.coverUrl} alt="" /> : null}
+            {details && details !== "failed" && details.trailer && (
+              <TrailerButton
+                trailer={details.trailer}
+                onOpen={async (trailer) => {
+                  if (!host.openTrailer) {
+                    window.open(trailer.url, "_blank", "noopener");
+                    return;
+                  }
+                  try {
+                    await host.openTrailer(m, trailer);
+                  } catch (e) {
+                    props.toast(`Couldn't open the trailer: ${errorText(e)}`);
+                  }
+                }}
+              />
+            )}
+          </div>
           <div class="dinfo">
             <h2>{props.title}</h2>
             <div class="muted" style="font-size:.88rem">
@@ -1659,6 +1734,30 @@ function Details(props: {
         </div>
       </div>
     </>
+  );
+}
+
+const SITE_NAMES: Record<Trailer["site"], string> = {
+  youtube: "YouTube",
+  dailymotion: "Dailymotion",
+};
+
+/** The trailer's thumbnail under the cover; it opens the video, since embedding can't work in Seanime. */
+function TrailerButton(props: { trailer: Trailer; onOpen: (trailer: Trailer) => void }) {
+  const { trailer } = props;
+  const site = SITE_NAMES[trailer.site];
+  return (
+    <button
+      type="button"
+      class="trailer"
+      title={`Watch the trailer on ${site}`}
+      aria-label={`Watch the trailer on ${site}`}
+      style={trailer.thumbnail ? { backgroundImage: `url("${trailer.thumbnail}")` } : undefined}
+      onClick={() => props.onOpen(trailer)}
+    >
+      <span class="tr-play" aria-hidden="true" />
+      <span class="tr-tag">▶ Trailer · {site}</span>
+    </button>
   );
 }
 

@@ -38,6 +38,7 @@ function connect(fail: Partial<Record<string, string>> = {}) {
     planned: [] as [number, MediaType][],
     navigated: [] as unknown[],
     links: [] as [string, string][],
+    trailers: [] as [string, string][],
   };
   const h = handlers({
     collection: (type) => (type === "ANIME" ? anime : null),
@@ -49,6 +50,7 @@ function connect(fail: Partial<Record<string, string>> = {}) {
     storageSet: (k, v) => storage.set(k, v),
     navigate: (path, params) => done.navigated.push([path, params]),
     showLink: (url, title) => done.links.push([url, title]),
+    showTrailer: (url, title) => done.trailers.push([url, title]),
   });
   const listeners = new Map<string, ((p: unknown) => void)[]>();
   const copy = (v: unknown) => JSON.parse(JSON.stringify(v)); // the channel serialises
@@ -158,6 +160,27 @@ describe("Seanime host over the channel", () => {
     expect(
       answer(h, { id: 1, method: "openOnSite", args: ["https://evil.example/", "x"] }),
     ).toEqual({ id: 1, ok: false, error: "only AniList links can be opened" });
+  });
+
+  it("shows a trailer link through its own dialog, and only trailer links", async () => {
+    const { host, done } = connect();
+    const url = "https://www.youtube.com/watch?v=tR8YH0G67Rk";
+    await host.openTrailer?.(
+      { ...media(1, "ANIME"), title: "T" },
+      {
+        site: "youtube",
+        url,
+        thumbnail: null,
+      },
+    );
+    expect(done.trailers).toEqual([[url, "T"]]);
+    const h = handlers({ showTrailer: () => {} } as never);
+    for (const bad of ["https://anilist.co/anime/1", `${url}&list=x`, "https://evil.example/"])
+      expect(answer(h, { id: 1, method: "openTrailer", args: [bad, "x"] })).toEqual({
+        id: 1,
+        ok: false,
+        error: "only YouTube and Dailymotion trailers open",
+      });
   });
 
   it("turns plugin errors into rejections, and gives up when Seanime is silent", async () => {

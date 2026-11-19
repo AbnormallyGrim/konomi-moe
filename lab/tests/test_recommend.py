@@ -42,6 +42,80 @@ def test_ranks_fitting_candidates_first_and_filters(store):
     assert cosy.reasons and cosy.sources == ["liked Test Show 1"]
 
 
+def test_sequels_only_after_a_finished_prequel(store):
+    entries = seed(store)
+    statuses = [
+        ListStatus.COMPLETED,
+        ListStatus.REPEATING,
+        ListStatus.PLANNING,
+        ListStatus.CURRENT,
+        ListStatus.PAUSED,
+        ListStatus.DROPPED,
+    ]
+    for i, status in enumerate(statuses):
+        store.upsert_media([make_media(40 + i, ["Iyashikei"], ["Slice of Life"])])
+        entries.append(ListEntry(40 + i, status, progress=1))
+    store.upsert_media(
+        [
+            make_media(
+                50 + i,
+                ["Iyashikei"],
+                ["Slice of Life"],
+                relations=[Relation("PREQUEL", 40 + i, None)],
+            )
+            for i in range(len(statuses))
+        ]
+    )
+    store.replace_recommendations({1: [(50 + i, 5) for i in range(len(statuses))]})
+
+    ids = {r.media.id for r in recommend(store, build_profile(store, entries))}
+    assert ids == {50, 51}  # sequels of completed and rewatched seasons only
+
+
+def test_sequel_of_an_unwatched_season_becomes_its_first_unwatched_season(store):
+    entries = seed(store)
+    entries.append(ListEntry(70, ListStatus.COMPLETED, 80))
+
+    def show(i, prequel=None, title=None):
+        relations = [Relation("PREQUEL", prequel, None)] if prequel else []
+        return make_media(i, ["Iyashikei"], ["Slice of Life"], relations=relations, title=title)
+
+    store.upsert_media(
+        [
+            show(60, title="Season 1"),
+            show(61, 60),
+            show(62, 61),  # season 3 of an unwatched season 1 → season 1
+            show(70),
+            show(71, 70, title="Next Season"),
+            show(72, 71),  # season 3 after a finished season 1 → season 2
+            show(81, 80),  # season 1 not cached → dropped
+            show(91, 90),  # season 1 on the list, dropped → dropped
+        ]
+    )
+    entries.append(ListEntry(90, ListStatus.DROPPED, progress=1))
+    store.replace_recommendations({1: [(62, 9), (61, 5), (72, 5), (81, 5), (91, 5)]})
+
+    recs = {r.media.id: r for r in recommend(store, build_profile(store, entries))}
+    assert {60, 71} <= recs.keys()
+    assert not recs.keys() & {61, 62, 72, 81, 91}
+    assert recs[60].sources == ["liked Test Show 1"]
+
+
+def test_fetch_caches_uncached_first_seasons(store):
+    entries = seed(store)
+    store.upsert_media([make_media(61, ["Iyashikei"], relations=[Relation("PREQUEL", 60, None)])])
+    store.replace_recommendations({1: [(61, 5)]})
+    asked = []
+
+    def fetch(ids):
+        asked.append(ids)
+        store.upsert_media([make_media(60, ["Iyashikei"], title="Season 1")])
+
+    recs = recommend(store, build_profile(store, entries), fetch=fetch)
+    assert asked == [{60}]
+    assert [r.media.id for r in recs] == [60]
+
+
 def test_include_listed_adds_unfinished_list_titles_only(store):
     entries = seed(store)
     for i, status in [(24, ListStatus.PLANNING), (25, ListStatus.CURRENT),
