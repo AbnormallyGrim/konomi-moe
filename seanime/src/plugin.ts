@@ -157,37 +157,14 @@ function seanimeApi(ctx: SeanimeContext): Api {
   // can: its links open from Seanime's window (the desktop app sends them to the browser).
   // The link must not have a click handler: Seanime cancels navigation when one is set.
   // Plugin dialogs need Seanime 3.10.4, the declared minimum (MIN_SEANIME in scripts/build.ts).
-  const link = { url: "", title: "" };
-  const modal = ctx.newModal({ title: "Open on AniList" });
-  modal.render(() => [
-    modal.stack(
-      [
-        modal.text(`${link.title} opens in your browser.`),
-        modal.flex(
-          [
-            modal.img(ANILIST_ICON_URL, { width: "20", height: "20", alt: "AniList" }),
-            modal.anchor("Open on AniList", { href: link.url, target: "_blank" }),
-          ],
-          { gap: 2 },
-        ),
-      ],
-      { gap: 3 },
-    ),
-  ]);
-  const trailer = { url: "", title: "" };
-  const trailerModal = ctx.newModal({ title: "Watch the trailer" });
-  trailerModal.render(() => [
-    trailerModal.stack(
-      [
-        trailerModal.text(`${trailer.title}'s trailer opens in your browser.`),
-        trailerModal.anchor(
-          trailer.url.includes("dailymotion") ? "Watch on Dailymotion" : "Watch on YouTube",
-          { href: trailer.url, target: "_blank" },
-        ),
-      ],
-      { gap: 3 },
-    ),
-  ]);
+  // Seanime keeps one dialog per plugin: each newModal call replaces its title and content
+  // (internal/plugin/ui/modal.go). So the dialog is set up when a link is shown, not once at
+  // start; two dialogs made at start left only the last one, and AniList opened the trailer.
+  const showDialog = (title: string, content: (m: SeanimeModal) => unknown[]) => {
+    const modal = ctx.newModal({ title });
+    modal.render(() => content(modal));
+    modal.open();
+  };
   return {
     collection: (type) =>
       (type === "MANGA"
@@ -201,16 +178,35 @@ function seanimeApi(ctx: SeanimeContext): Api {
     storageGet: (key) => $storage.get(key),
     storageSet: (key, value) => $storage.set(key, value),
     navigate: (path, params) => ctx.screen.navigateTo(path, params),
-    showLink: (url, title) => {
-      link.url = url;
-      link.title = title;
-      modal.open();
-    },
-    showTrailer: (url, title) => {
-      trailer.url = url;
-      trailer.title = title;
-      trailerModal.open();
-    },
+    showLink: (url, title) =>
+      showDialog("Open on AniList", (m) => [
+        m.stack(
+          [
+            m.text(`${title} opens in your browser.`),
+            m.flex(
+              [
+                m.img(ANILIST_ICON_URL, { width: "20", height: "20", alt: "AniList" }),
+                m.anchor("Open on AniList", { href: url, target: "_blank" }),
+              ],
+              { gap: 2 },
+            ),
+          ],
+          { gap: 3 },
+        ),
+      ]),
+    showTrailer: (url, title) =>
+      showDialog("Watch the trailer", (m) => [
+        m.stack(
+          [
+            m.text(`${title}'s trailer opens in your browser.`),
+            m.anchor(url.includes("dailymotion") ? "Watch on Dailymotion" : "Watch on YouTube", {
+              href: url,
+              target: "_blank",
+            }),
+          ],
+          { gap: 3 },
+        ),
+      ]),
   };
 }
 
