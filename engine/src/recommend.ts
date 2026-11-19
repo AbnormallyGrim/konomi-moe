@@ -194,6 +194,11 @@ export interface RankOptions {
   includeListed?: boolean;
 }
 
+export function blendScore(profile: Profile, m: Media, predicted: number): number {
+  const community = ((m.averageScore ?? 70) - 70) / 10;
+  return predicted + profile.communityWeight * community;
+}
+
 /** Rank the candidates in `sources` whose details are in `media`; best first. */
 export function rank(
   profile: Profile,
@@ -235,7 +240,6 @@ export function rank(
 
   const predicted = profile.model.predict(candidates);
   const ranked = candidates.map((m, i): Recommendation => {
-    const community = ((m.averageScore ?? 70) - 70) / 10;
     const spoilers = new Set(m.tags.filter((t) => t.spoiler).map((t) => `tag:${t.name}`));
     const reasons = profile.model
       .contributions(m)
@@ -247,7 +251,7 @@ export function rank(
       });
     return {
       media: m,
-      score: (predicted[i] ?? 0) + profile.communityWeight * community,
+      score: blendScore(profile, m, predicted[i] ?? 0),
       reasons,
       sources: moved.get(m.id) ?? [],
     };

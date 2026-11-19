@@ -16,8 +16,8 @@ export const MEDIA_WITH_RECS_BY_IDS =
 export const DISCOVER =
   "\nquery (\n  $type: MediaType\n  $page: Int\n  $perPage: Int\n  $genreIn: [String]\n  $tagIn: [String]\n  $minimumTagRank: Int\n  $tagNotIn: [String]\n  $genreNotIn: [String]\n  $idNotIn: [Int]\n  $formatIn: [MediaFormat]\n  $startGreater: FuzzyDateInt\n  $startLesser: FuzzyDateInt\n  $statusIn: [MediaStatus]\n  $countryOfOrigin: CountryCode\n  $averageScoreGreater: Int\n) {\n  Page(page: $page, perPage: $perPage) {\n    media(\n      type: $type\n      genre_in: $genreIn\n      tag_in: $tagIn\n      minimumTagRank: $minimumTagRank\n      tag_not_in: $tagNotIn\n      genre_not_in: $genreNotIn\n      id_not_in: $idNotIn\n      format_in: $formatIn\n      startDate_greater: $startGreater\n      startDate_lesser: $startLesser\n      status_in: $statusIn\n      countryOfOrigin: $countryOfOrigin\n      averageScore_greater: $averageScoreGreater\n      isAdult: false\n      sort: SCORE_DESC\n    ) { ...MediaFields }\n  }\n}\n\nfragment MediaFields on Media {\n  id\n  type\n  format\n  status\n  isAdult\n  siteUrl\n  title { romaji english native }\n  countryOfOrigin\n  coverImage { large }\n  episodes\n  chapters\n  startDate { year }\n  averageScore\n  meanScore\n  popularity\n  favourites\n  stats { scoreDistribution { score amount } }\n  genres\n  tags { name rank isMediaSpoiler }\n  studios(isMain: true) { nodes { name } }\n  relations { edges { relationType node { id type } } }\n}\n";
 
-/** Name of the user a token belongs to. */
-export const VIEWER = "query { Viewer { id name } }";
+/** The user a token belongs to: name and profile picture. */
+export const VIEWER = "query { Viewer { id name avatar { medium } } }";
 
 /** A title's synopsis. */
 export const MEDIA_DESCRIPTION =

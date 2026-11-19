@@ -170,6 +170,7 @@ describe("Seanime host over the channel", () => {
       {
         site: "youtube",
         url,
+        embedUrl: "https://www.youtube-nocookie.com/embed/tR8YH0G67Rk",
         thumbnail: null,
       },
     );

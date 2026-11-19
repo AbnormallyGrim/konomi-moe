@@ -5,6 +5,7 @@
       "engine/**",
       "ui/**",
       "seanime/**",
+      "extension/**",
       "*.json",
       "!**/node_modules",
       "!lab",

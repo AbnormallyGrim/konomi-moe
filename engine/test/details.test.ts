@@ -46,6 +46,7 @@ describe("parseDetails", () => {
     expect(parseTrailer({ id: "tR8YH0G67Rk", site: "youtube", thumbnail: null })).toEqual({
       site: "youtube",
       url: "https://www.youtube.com/watch?v=tR8YH0G67Rk",
+      embedUrl: "https://www.youtube-nocookie.com/embed/tR8YH0G67Rk",
       thumbnail: "https://i.ytimg.com/vi/tR8YH0G67Rk/hqdefault.jpg",
     });
     expect(
@@ -53,6 +54,7 @@ describe("parseDetails", () => {
     ).toEqual({
       site: "dailymotion",
       url: "https://www.dailymotion.com/video/x8abc",
+      embedUrl: "https://geo.dailymotion.com/player.html?video=x8abc",
       thumbnail: "https://s2.dmcdn.net/x.jpg",
     });
     expect(parseTrailer({ id: "abc", site: "vimeo" })).toBeNull();

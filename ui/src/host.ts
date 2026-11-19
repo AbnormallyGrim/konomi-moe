@@ -5,6 +5,7 @@
  */
 
 import type { ListEntry, Media, MediaType, Trailer, Transport } from "@konomi/engine";
+import type { Session } from "./session.ts";
 
 /** The signed-in user. */
 export interface HostUser {
@@ -26,6 +27,10 @@ export interface Host {
   user(): Promise<HostUser | null>;
   /** Remembers a username typed on the welcome screen (hosts without a sign-in). */
   setUser?(name: string): Promise<void>;
+  signIn?(): Promise<HostUser>;
+  signInWithCode?(code: string): Promise<HostUser>;
+  signOut?(): Promise<void>;
+  serve?(session: Session, refresh: () => void): () => void;
   /**
    * The user's list for one type, when the host has it (Seanime does, private lists included).
    * Without this, lists are read from AniList by username, which needs a public list.
@@ -50,4 +55,5 @@ export interface Host {
   openOnSite?(media: Media): Promise<void>;
   /** Opens a title's trailer in the browser; without it the page opens the link itself. */
   openTrailer?(media: Media, trailer: Trailer): Promise<void>;
+  readonly embedsTrailers?: boolean;
 }

@@ -308,13 +308,6 @@ h3 {
 .shell.top .brand {
   padding: 0 1.2rem 0 0;
 }
-.logo {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  border: 2px dashed var(--faint);
-  background: var(--surface-2);
-} /* placeholder until branding is decided */
 .nav {
   display: flex;
   align-items: center;
@@ -366,6 +359,10 @@ h3 {
   color: #fff;
   background: linear-gradient(135deg, #3aa7ff, #6a5cff);
   flex: none;
+}
+img.avatar {
+  object-fit: cover;
+  background: var(--surface-3);
 }
 .me small {
   display: block;
@@ -1415,14 +1412,9 @@ body {
   color: var(--muted);
 }
 
-/* Placeholder logo until branding is decided */
 .logo {
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  border: 2px dashed var(--faint);
-  background: var(--surface-2);
-  box-shadow: none;
+  display: block;
+  object-fit: contain;
   flex: none;
 }
 
@@ -1903,9 +1895,9 @@ button.tab.on {
   border-bottom-color: var(--surface);
 }
 
-/* The trailer under the cover in a title's dialog. It opens the video rather than embedding it:
-   Seanime's sandboxed frame blocks embedded players. YouTube's thumbnail is 4:3 with black
-   bars; covering a 16:9 box crops them off. */
+/* The trailer under the cover in a title's dialog. In the browser extension it plays in the
+   player below; Seanime's sandboxed frame blocks embedded players, so there it opens the video.
+   YouTube's thumbnail is 4:3 with black bars; covering a 16:9 box crops them off. */
 .trailer {
   position: relative;
   display: block;
@@ -1971,4 +1963,77 @@ button.tab.on {
   font-size: 0.78rem;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.player {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  animation: fade 0.18s ease;
+}
+.player-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+}
+.player-box {
+  position: relative;
+  width: min(1100px, 94vw, calc((100vh - 120px) * 16 / 9));
+  display: grid;
+  gap: 0.7rem;
+}
+.player-frame {
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.player-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.player-title {
+  flex: 1;
+  min-width: 0;
+  color: #fff;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome .signin {
+  justify-content: center;
+  height: 44px;
+}
+.welcome .signin-note {
+  margin: -0.4rem 0 0;
+  font-size: 0.8rem;
+}
+.welcome .signin-error {
+  margin: 0;
+  color: var(--bad);
+  font-size: 0.84rem;
+}
+.welcome .signin-wait {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  font-size: 0.9rem;
 }

@@ -18,7 +18,8 @@ import {
 } from "@konomi/engine";
 import type { ComponentChildren } from "preact";
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { Host } from "./host.ts";
+import LOGO from "./assets/logo.png";
+import type { Host, HostUser } from "./host.ts";
 import { ANILIST_LOGO } from "./logos.ts";
 import {
   displayTitle,
@@ -207,11 +208,15 @@ export function App({ host }: { host: Host }) {
   const [error, setError] = useState<string | null>(null);
   /** The host's background first sync, while the page waits for it. */
   const [setup, setSetup] = useState<Busy | null>(null);
+  const [revision, setRevision] = useState(0);
+
+  const [user, setUser] = useState<HostUser | null>(null);
 
   const start = useCallback(
-    async (name: string) => {
+    async (who: HostUser) => {
+      const { name } = who;
+      setUser(who);
       try {
-        await host.setUser?.(name);
         // If the host is already syncing (the Seanime plugin's first run), show the usual
         // loader with its progress and open the store once it's saved. A failed background
         // sync only means the page syncs itself, as it would have anyway.
@@ -230,10 +235,15 @@ export function App({ host }: { host: Host }) {
 
   useEffect(() => {
     host.user().then(
-      (u) => (u ? start(u.name) : setNeedsUser(true)),
+      (u) => (u ? start(u) : setNeedsUser(true)),
       (e) => setError(errorText(e)),
     );
   }, [host, start]);
+
+  useEffect(() => {
+    if (!session || !host.serve) return;
+    return host.serve(session, () => setRevision((r) => r + 1));
+  }, [host, session]);
 
   if (error)
     return (
@@ -242,7 +252,16 @@ export function App({ host }: { host: Host }) {
         <p>{error}</p>
       </div>
     );
-  if (needsUser) return <Welcome onUser={start} />;
+  if (needsUser)
+    return (
+      <Welcome
+        host={host}
+        onUser={async (who, typed) => {
+          if (typed) await host.setUser?.(who.name);
+          await start(who);
+        }}
+      />
+    );
   if (setup) return <LoadingOverlay busy={setup} note={FIRST_SYNC_NOTE} />;
   if (!session)
     return (
@@ -250,38 +269,140 @@ export function App({ host }: { host: Host }) {
         <span class="spinner" />
       </div>
     );
-  return <Shell session={session} />;
+  return <Shell key={revision} session={session} avatarUrl={user?.avatarUrl ?? null} />;
 }
 
-function Welcome({ onUser }: { onUser: (name: string) => void }) {
+function UserAvatar({ name, url }: { name: string; url: string | null }) {
+  const [broken, setBroken] = useState(false);
+  if (url && !broken)
+    return <img class="avatar" src={url} alt="" onError={() => setBroken(true)} />;
+  return <div class="avatar">{name.slice(0, 1).toUpperCase()}</div>;
+}
+
+function Welcome(props: { host: Host; onUser: (user: HostUser, typed: boolean) => void }) {
+  const { host } = props;
+  const signIn = host.signIn?.bind(host);
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"idle" | "waiting" | "checking">("idle");
+  const [failed, setFailed] = useState<string | null>(null);
+  const done = useRef(false);
+
+  const finish = (user: HostUser) => {
+    if (done.current) return;
+    done.current = true;
+    props.onUser(user, false);
+  };
+  const fail = (e: unknown) => {
+    if (done.current) return;
+    setFailed(errorText(e));
+    setStep("idle");
+  };
+
   return (
     <div class="welcome">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (name.trim()) onUser(name.trim());
+          if (step === "waiting" && code.trim() && host.signInWithCode) {
+            setStep("checking");
+            host.signInWithCode(code.trim()).then(finish, fail);
+          } else if (!signIn && name.trim()) props.onUser({ name: name.trim() }, true);
         }}
       >
-        <div class="logo" style="width:44px;height:44px;border-radius:12px" />
+        <img class="logo" src={LOGO} alt="" width={44} height={44} />
         <h1>Find your next favourite</h1>
         <p class="muted">
           Recommendations learned from your own anime and manga list: what you scored, finished and
           dropped. Everything stays on this device.
         </p>
-        <label class="label" for="username">
-          AniList username
-        </label>
-        <input
-          id="username"
-          class="field"
-          value={name}
-          placeholder="Your public AniList username"
-          onInput={(e) => setName((e.target as HTMLInputElement).value)}
-        />
-        <button class="btn primary" type="submit" style="justify-content:center;height:42px">
-          See my picks
-        </button>
+        {signIn ? (
+          <>
+            {step !== "waiting" && (
+              <button
+                type="button"
+                class="btn primary signin"
+                disabled={step === "checking"}
+                aria-busy={step === "checking"}
+                onClick={() => {
+                  setFailed(null);
+                  setStep("waiting");
+                  signIn().then(finish, fail);
+                }}
+              >
+                {step === "checking" ? (
+                  <span class="spinner small" aria-hidden="true" />
+                ) : (
+                  <img src={ANILIST_LOGO} alt="" width={18} height={18} />
+                )}
+                {step === "checking" ? "Signing in…" : "Sign in with AniList"}
+              </button>
+            )}
+            {step === "idle" && (
+              <p class="muted signin-note">
+                You approve {NAME} on AniList, which lets it read your lists (private ones too) and
+                add picks to your planning list. Nothing else.
+              </p>
+            )}
+            {step === "waiting" && (
+              <>
+                <div class="signin-wait">
+                  <span class="spinner small" aria-hidden="true" />
+                  Approve {NAME} in the AniList tab that opened.
+                </div>
+                {host.signInWithCode && (
+                  <>
+                    <label class="label" for="code">
+                      Didn't come back here? Paste the code AniList shows
+                    </label>
+                    <input
+                      id="code"
+                      class="field"
+                      value={code}
+                      autocomplete="off"
+                      spellcheck={false}
+                      placeholder="eyJ0eXAiOiJKV1Qi…"
+                      onInput={(e) => setCode((e.target as HTMLInputElement).value)}
+                    />
+                    <button
+                      class="btn primary"
+                      type="submit"
+                      disabled={!code.trim()}
+                      style="justify-content:center;height:42px"
+                    >
+                      Continue
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  class="btn ghost"
+                  style="justify-content:center"
+                  onClick={() => setStep("idle")}
+                >
+                  Start again
+                </button>
+              </>
+            )}
+            {failed && <p class="signin-error">{failed}</p>}
+          </>
+        ) : (
+          <>
+            <label class="label" for="username">
+              AniList username
+            </label>
+            <input
+              id="username"
+              class="field"
+              value={name}
+              placeholder="Your public AniList username"
+              onInput={(e) => setName((e.target as HTMLInputElement).value)}
+            />
+            <button class="btn primary" type="submit" style="justify-content:center;height:42px">
+              See my picks
+            </button>
+          </>
+        )}
       </form>
     </div>
   );
@@ -289,7 +410,7 @@ function Welcome({ onUser }: { onUser: (name: string) => void }) {
 
 /* Shell */
 
-function Shell({ session }: { session: Session }) {
+function Shell({ session, avatarUrl }: { session: Session; avatarUrl: string | null }) {
   const seanime = session.host.kind === "seanime";
   const [view, setView] = useState<View>("foryou");
   const [kind, setKind] = useState<MediaType>("ANIME");
@@ -351,7 +472,7 @@ function Shell({ session }: { session: Session }) {
     <div class={`shell ${seanime ? "host-seanime" : ""}`}>
       <aside class="side">
         <div class="brand">
-          <div class="logo" />
+          <img class="logo" src={LOGO} alt="" width={30} height={30} />
           {NAME}
         </div>
         {nav.map(([v, text]) => (
@@ -373,7 +494,7 @@ function Shell({ session }: { session: Session }) {
             Synced {ago(synced)}
           </div>
           <div class="me">
-            <div class="avatar">{session.user.slice(0, 1).toUpperCase()}</div>
+            <UserAvatar name={session.user} url={avatarUrl} />
             <div>
               {session.user}
               <small>AniList</small>
@@ -1508,11 +1629,18 @@ function Details(props: {
   const [details, setDetails] = useState<TitleDetails | null | "failed">(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [planning, setPlanning] = useState<"idle" | "busy" | "done" | "listed">("idle");
+  const [playing, setPlaying] = useState<Trailer | null>(null);
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
 
   useEffect(() => {
     session.themesOf(m).then(setThemes);
     session.titleDetails(m.id).then(setDetails, () => setDetails("failed"));
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (playingRef.current) setPlaying(null);
+      else onClose();
+    };
     document.addEventListener("keydown", onKey);
     document.documentElement.classList.add("dialog-open");
     return () => {
@@ -1554,6 +1682,10 @@ function Details(props: {
               <TrailerButton
                 trailer={details.trailer}
                 onOpen={async (trailer) => {
+                  if (host.embedsTrailers && trailer.site === "youtube") {
+                    setPlaying(trailer);
+                    return;
+                  }
                   if (!host.openTrailer) {
                     window.open(trailer.url, "_blank", "noopener");
                     return;
@@ -1733,6 +1865,9 @@ function Details(props: {
           {details && details !== "failed" && <People details={details} />}
         </div>
       </div>
+      {playing && (
+        <TrailerPlayer trailer={playing} title={props.title} onClose={() => setPlaying(null)} />
+      )}
     </>
   );
 }
@@ -1742,7 +1877,10 @@ const SITE_NAMES: Record<Trailer["site"], string> = {
   dailymotion: "Dailymotion",
 };
 
-/** The trailer's thumbnail under the cover; it opens the video, since embedding can't work in Seanime. */
+/**
+ * The trailer's thumbnail under the cover. It plays the video in `TrailerPlayer` where the host
+ * can embed it (the browser extension), and opens it on its site elsewhere (Seanime).
+ */
 function TrailerButton(props: { trailer: Trailer; onOpen: (trailer: Trailer) => void }) {
   const { trailer } = props;
   const site = SITE_NAMES[trailer.site];
@@ -1758,6 +1896,52 @@ function TrailerButton(props: { trailer: Trailer; onOpen: (trailer: Trailer) => 
       <span class="tr-play" aria-hidden="true" />
       <span class="tr-tag">▶ Trailer · {site}</span>
     </button>
+  );
+}
+
+function playerUrl(trailer: Trailer): string {
+  const url = new URL(trailer.embedUrl);
+  url.searchParams.set("autoplay", "1");
+  if (trailer.site === "youtube") {
+    url.searchParams.set("rel", "0");
+    url.searchParams.set("playsinline", "1");
+  }
+  return url.href;
+}
+
+function TrailerPlayer(props: { trailer: Trailer; title: string; onClose: () => void }) {
+  const { trailer } = props;
+  const site = SITE_NAMES[trailer.site];
+  return (
+    <div class="player" role="dialog" aria-modal="true" aria-label={`Trailer: ${props.title}`}>
+      <button
+        type="button"
+        class="player-scrim"
+        tabIndex={-1}
+        aria-label="Close the trailer"
+        onClick={props.onClose}
+      />
+      <div class="player-box">
+        <div class="player-frame">
+          <iframe
+            src={playerUrl(trailer)}
+            title={`${props.title} trailer`}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerpolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        <div class="player-bar">
+          <span class="player-title">{props.title}</span>
+          <a class="btn" href={trailer.url} target="_blank" rel="noopener noreferrer">
+            Open on {site} ↗
+          </a>
+          <button type="button" class="btn" onClick={props.onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -2021,6 +2205,24 @@ function SettingsView(props: {
             ))}
           </select>
         </Setting>
+
+        {session.host.signOut && (
+          <>
+            <h2 class="section">Account</h2>
+            <Setting name="AniList" hint={`Signed in as ${session.user}`}>
+              <button
+                type="button"
+                class="btn"
+                onClick={async () => {
+                  await session.host.signOut?.();
+                  location.reload();
+                }}
+              >
+                Sign out
+              </button>
+            </Setting>
+          </>
+        )}
 
         <h2 class="section">Exclusions</h2>
         <Exclusions session={session} language={settings.titleLanguage} />
