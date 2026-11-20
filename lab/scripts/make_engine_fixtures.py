@@ -3,6 +3,7 @@
 Run from lab/: `uv run python scripts/make_engine_fixtures.py`. Uses fixed random data only.
 """
 
+import base64
 import json
 from pathlib import Path
 
@@ -45,6 +46,9 @@ def main() -> None:
     w = parity_world.world()
     (OUT / "parity.json").write_text(json.dumps({"world": w, **parity_world.expected(w)}) + "\n")
     print(f"wrote {OUT / 'parity.json'}")
+    table = base64.b64encode(parity_world.crowd_table(w)).decode()
+    (OUT / "crowd.json").write_text(json.dumps({"table": table}) + "\n")
+    print(f"wrote {OUT / 'crowd.json'}")
 
 
 if __name__ == "__main__":

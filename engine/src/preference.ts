@@ -1,4 +1,4 @@
-/** Learns a user's taste from their list: labels, features and the model. Mirrors the lab's taste.py. */
+/** Learns a user's preferences from their list: labels, features and the model. Mirrors the lab's preference.py. */
 
 import { type ListEntry, type Media, mediaLength } from "./models.ts";
 import { fitRidge, predictRow, type RidgeFit, type SparseRow } from "./ridge.ts";
@@ -76,7 +76,7 @@ export function userMean(entries: ListEntry[]): number {
   return scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : DEFAULT_MEAN;
 }
 
-/** `[target, weight]` for an entry, or `null` if it says nothing about taste. */
+/** `[target, weight]` for an entry, or `null` if it says nothing about preferences. */
 export function label(
   entry: ListEntry,
   media: Media,
@@ -164,7 +164,7 @@ export class NotEnoughHistory extends Error {
 }
 
 /** Ridge regression from title features to how much the user likes it. */
-export class TasteModel {
+export class PreferenceModel {
   readonly alpha: number;
   readonly minFeatureCount: number;
   private vocabulary = new Map<string, number>();
@@ -238,7 +238,7 @@ export class TasteModel {
   }
 
   private fitted(): RidgeFit {
-    if (!this.fit_) throw new Error("TasteModel used before fit()");
+    if (!this.fit_) throw new Error("PreferenceModel used before fit()");
     return this.fit_;
   }
 }

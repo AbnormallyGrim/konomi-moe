@@ -1,5 +1,6 @@
 """The engine's parity fixture must match what the lab produces today."""
 
+import base64
 import json
 import sys
 from pathlib import Path
@@ -17,6 +18,8 @@ def test_parity_fixture_is_current():
     saved = json.loads(FIXTURE.read_text())
     world = json.loads(json.dumps(parity_world.world()))
     assert saved["world"] == world, HINT
+    table = json.loads((FIXTURE.parent / "crowd.json").read_text())["table"]
+    assert base64.b64decode(table) == parity_world.crowd_table(world), HINT
     now = json.loads(json.dumps(parity_world.expected(world)))
     assert saved["scenarios"] == now["scenarios"], HINT
     for old, new in zip(saved["results"], now["results"], strict=True):

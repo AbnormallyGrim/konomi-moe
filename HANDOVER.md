@@ -13,7 +13,7 @@ Status after the tenth session (2026-11-18). Read `README.md` for what the app d
 - `anilist/`: rate-limited GraphQL client (30 req/min by default, honours `Retry-After` and `X-RateLimit-*`, retries 429/5xx/network errors), queries and parsing.
 - `store.py`: SQLite cache of titles, lists, recommendation links, sync times and the imported offline database.
 - `sync.py`: list sync in chunks of 500, then fetching only missing candidate details, plus a tag-based discovery search.
-- `taste.py`: labels from scores, drops and rewatches; features; ridge model with explanations.
+- `preference.py`: labels from scores, drops and rewatches; features; ridge model with explanations.
 - `recommend.py`: candidate gathering, filtering (on list, adult, missing prequel) and ranking.
 - `offline.py`: import of the anime-offline-database (`.jsonl` or `.jsonl.zst`), a rough tag-match pre-score, and fetching AniList details for the top picks only.
 - 50 tests (no network, enforced by an autouse fixture in `tests/conftest.py`; the UI is tested with Streamlit's `AppTest`), ruff clean.
@@ -102,7 +102,7 @@ Steps:
   - One centred loading overlay over the blurred page, with the step, a progress bar, "x of y · about N s left" (2 s a request), and a first-sync note.
   - One "Sync list" button, and no "Refresh picks" (Apply runs a search).
   - The filters panel starts open and can be minimised (settings `filtersOpen`).
-  - A tag picker over AniList's ~430 tags, with "Your top tags" suggestions (`Taste.likedTags`), and a country-of-origin filter (JP, KR, CN, TW).
+  - A tag picker over AniList's ~430 tags, with "Your top tags" suggestions (`Preferences.likedTags`), and a country-of-origin filter (JP, KR, CN, TW).
   - Excluding tags, genres, studios or a title drops matching picks at once with no AniList calls, because each run keeps a pool of 200 ranked picks (`POOL`). "Show more" pages through the pool and ranks 200 more when it runs out. The dialog lost "Exclude title and sequels" (the card's ✕ does it).
   - "Your taste" is now "Stats", with "You tend to enjoy" / "You tend to avoid". Settings is one page, without the "Stored in…" and "Privacy" cards, and has a title language setting (English, Romaji, Native, falling back when AniList has none).
 - **Engine changes in that round:**
@@ -214,6 +214,17 @@ Steps, in order:
 Watch out:
 - The earlier finding that watch-based vectors beat score-based ones was about how *title vectors* were built. Both versions fitted the user to their scores and were graded within the list, so it doesn't show which target is right. On the full-coverage dataset it was split: watch-based won on AUC (0.717 vs 0.709), score-based at the top (hit@10 92–94% vs 89%). That dataset holds scored titles only, so "watch-based" there meant "scored at all". Step 4's last model tests the target question.
 - Shikimori's users mostly speak Russian. Which titles go together should carry over; tuned label values (unscored completed = +1.0 and so on) may not. Step 8 guards against that.
+
+## Crowd picks and new-release slots (2026-11-20; not released yet)
+
+The anime ranking now uses the model that won the owner's in-depth comparison (198k held-out users and Shikimori's split by date; details in the owner's private working repo, HANDOVER "Comparison results (session 12)"). Against the previous ranking: about 2.5× the net gain on held-out users (0.387 vs 0.154 liked-minus-disliked hits per 20 picks) with a better enjoy AUC (0.725 vs 0.703), and +68% net gain on what Shikimori users really started later.
+
+- **The table:** `engine/assets/crowd.bin` (21 MB): two EASE item-to-item tables (titles liked, and liked +1 / disliked −1) trained on about 1.2M public anime lists, each title kept to its 200 strongest links, plus each title's series start and year. AniList IDs and weights only: no user data. Written by the private repo's `konomi bench export`; the format is in `lab/src/konomi/crowd.py`.
+- **How the list is built** (`crowd.py` / `engine/src/crowd.ts`, `rank` / `recommend` with `crowd`): the user's liked titles' rows are summed and each series start takes the best score in its chain; the best starts take three quarters of the list; the preference model's best titles from 2025 on (newer than the lists) take the rest, found with one extra AniList search; everything is ordered by the preference score + ½ × the signed table's standardised score. With fewer than 3 liked titles in the table, or for manga, ranking is as before; other candidates fill any places the crowd leaves.
+- **Hosts:** the browser extension bundles the table (`extension/scripts/build.ts`). The Seanime page fetches it from next to its manifest (`crowd-<hash>.bin`, published by `npm run release -w seanime`), as it fetches AniList, so the plugin stays small and needs no new permission. The dev page has no table and ranks as before. A table that fails to load shows a warning and falls back.
+- **Also ported here:** the series-start fix (a series no longer starts at a special or OVA AniList lists before it, like "Attack on Titan: No Regrets"), and "taste" is now "preference" throughout the code (`preference.py`, `PreferenceModel`, `engine/src/preference.ts`).
+- **Tests:** `lab/tests/test_crowd.py`; two crowd scenarios in the parity world (`engine/test/fixtures/crowd.json` is the made-up table they use); lab tests never read the shipped table (`conftest.py`). `konomi recommend --no-crowd` gives the previous ranking for comparison.
+- **Not done:** a niche-taste check (whether users with mostly obscure titles do as well), and a refresh plan for the table, which ages as new titles come out (the owner's private HANDOVER covers the options).
 
 ## Suggested next steps
 

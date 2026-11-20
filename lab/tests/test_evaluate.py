@@ -4,7 +4,7 @@ import pytest
 
 from konomi import evaluate as ev
 from konomi.models import ListEntry, ListStatus
-from konomi.taste import examples
+from konomi.preference import examples
 from tests.conftest import make_media
 
 
@@ -26,9 +26,9 @@ def history(n=42):
     return examples(entries, media)
 
 
-def test_taste_model_beats_the_community_baseline():
+def test_preference_model_beats_the_community_baseline():
     data = history()
-    model = ev.cross_validate(data, ev.taste(community=0))
+    model = ev.cross_validate(data, ev.preference(community=0))
     crowd = ev.cross_validate(data, ev.community())
     assert model.auc > 0.9 and model.hit_rate > 0.9 and model.spearman > 0.8
     assert crowd.auc < 0.2  # this user disagrees with the crowd
@@ -37,15 +37,15 @@ def test_taste_model_beats_the_community_baseline():
 
 def test_results_are_deterministic_and_need_enough_titles():
     data = history()
-    assert ev.cross_validate(data, ev.taste()) == ev.cross_validate(data, ev.taste())
+    assert ev.cross_validate(data, ev.preference()) == ev.cross_validate(data, ev.preference())
     with pytest.raises(ValueError):
-        ev.cross_validate(data[:6], ev.taste())
+        ev.cross_validate(data[:6], ev.preference())
 
 
 def test_spearman_needs_scored_titles():
     dropped_only = [ex for ex in history() if not ex.scored]
     unscored = dropped_only + [ex for ex in history(60) if ex.scored][:2]
-    assert math.isnan(ev.cross_validate(unscored, ev.taste()).spearman)
+    assert math.isnan(ev.cross_validate(unscored, ev.preference()).spearman)
 
 
 def test_sweep_sorts_by_auc():
@@ -55,7 +55,7 @@ def test_sweep_sorts_by_auc():
 
 
 def test_truth_grades_only_sure_titles_while_training_on_all():
-    from konomi.taste import truth
+    from konomi.preference import truth
 
     media = {i: make_media(i, ["Iyashikei"] if i % 2 else ["Harem"]) for i in range(30)}
     entries = [
@@ -65,5 +65,5 @@ def test_truth_grades_only_sure_titles_while_training_on_all():
     entries += [ListEntry(i, ListStatus.PAUSED) for i in range(24, 30)]  # unsure: never graded
     key = truth(entries, media)
     assert {ex.media.id for ex in key} == set(range(24))
-    result = ev.cross_validate(examples(entries, media), ev.taste(community=0), truth=key)
+    result = ev.cross_validate(examples(entries, media), ev.preference(community=0), truth=key)
     assert result.n == 24 and result.auc > 0.9

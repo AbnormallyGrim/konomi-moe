@@ -10,7 +10,7 @@ export function manifest(target: Target, version: string, options: { key?: strin
     name: "Konomi.moe",
     version,
     description:
-      "Anime and manga recommendations that learn your taste from your own AniList list.",
+      "Anime and manga recommendations that learn your preferences from your own AniList list.",
     homepage_url: "https://github.com/AbnormallyGrim/konomi-moe",
     icons: ICONS,
     action: { default_popup: "popup.html", default_title: "Konomi.moe", default_icon: ICONS },

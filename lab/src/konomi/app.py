@@ -19,10 +19,10 @@ from konomi.filters import FORMATS, Filters
 from konomi.models import ListStatus, Media, MediaType
 from konomi.offline import read_offline_db
 from konomi.pipeline import NoSyncedList, RunOptions, run
+from konomi.preference import NotEnoughHistory, examples, user_mean
 from konomi.recommend import Recommendation, build_profile
 from konomi.store import Store
 from konomi.sync import sync_list
-from konomi.taste import NotEnoughHistory, examples, user_mean
 from konomi.themes import GENRES, Themes, tag_categories
 
 DB = os.environ.get("KONOMI_DB", "data/konomi.sqlite")
@@ -90,11 +90,11 @@ def main() -> None:
             key=MEDIA_TYPE,
             label_visibility="collapsed",
         )
-        picks, taste = st.tabs(["Recommendations", "Your taste"])
+        picks, preferences = st.tabs(["Recommendations", "Your preferences"])
         with picks:
             _recommendations(store, user, media_type, options)
-        with taste:
-            _taste(store, user, media_type)
+        with preferences:
+            _preferences(store, user, media_type)
     finally:
         store.close()
 
@@ -715,10 +715,10 @@ def _label_text(label: str) -> str:
     return f"{name} ({kind})"
 
 
-# Taste
+# Preferences
 
 
-def _taste(store: Store, user: str, media_type: MediaType) -> None:
+def _preferences(store: Store, user: str, media_type: MediaType) -> None:
     entries = store.list_entries(user, media_type)
     if not entries:
         st.info("Sync your list first, with the button in the sidebar.")

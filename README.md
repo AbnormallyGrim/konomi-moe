@@ -1,6 +1,6 @@
 # Konomi.moe
 
-Anime and manga recommendations that learn your taste from your own AniList list.
+Anime and manga recommendations that learn your preferences from your own AniList list.
 
 Konomi.moe looks at what you've scored, finished, rewatched and dropped, works out what you tend to enjoy, and suggests titles you haven't seen yet. Each pick comes with a short reason, like the genres, tags or studio that make it a good fit for you.
 
@@ -48,9 +48,18 @@ The app opens in a tab. Choose **Sign in with AniList** and approve Konomi.moe o
 
 Sign-in needs an AniList API client, registered once at [anilist.co/settings/developer](https://anilist.co/settings/developer) with the redirect URL `https://anilist.co/api/v2/oauth/pin`. Put its ID in `ANILIST_CLIENT_ID` in `extension/scripts/build.ts`, or build with `ANILIST_CLIENT_ID=<id>`. One client serves every browser.
 
+## How anime picks are made
+
+Two models work together:
+
+- **A table learned from other people's lists** (`engine/assets/crowd.bin`): links between titles ("people who liked this also liked that"), built from about 1.2 million public anime lists. It holds no information about any person: only AniList title IDs and link strengths. The titles your list likes pull up others, and a series counts with its strongest season. Most of your picks come from here.
+- **Your preference model**, learned from your own scores: which tags, genres and studios you rate above or below your average. It orders the list (with a small nudge from the table, where disliked titles count against), and it picks the newest releases, which are newer than the lists the table learned from. A quarter of the picks are kept for them.
+
+If the table knows too few of the titles you liked (a very short or very unusual list), the picks come from AniList's recommendations and tag searches ranked by your preference model, as before. Manga picks always work that way.
+
 ## Privacy
 
-Everything runs on your own computer. Your list and your taste profile stay with you. The only site contacted is AniList, to read your list and look up titles. In the browser extension, a trailer you choose to play loads from YouTube's privacy-enhanced player (youtube-nocookie.com).
+Everything runs on your own computer. Your list and your preference profile stay with you. The sites contacted are AniList, to read your list and look up titles, and, for the Seanime plugin only, GitHub, to download the recommendation table once (the browser extension has it built in). In the browser extension, a trailer you choose to play loads from YouTube's privacy-enhanced player (youtube-nocookie.com). See [PRIVACY.md](PRIVACY.md).
 
 ## License
 

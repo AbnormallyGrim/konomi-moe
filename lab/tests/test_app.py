@@ -41,7 +41,7 @@ def test_recommends_from_cached_data(db):
     assert not at.exception
     assert at.button(key="open-20").label == r"Cosy \<Pick\>"  # Markdown escaped
     assert at.metric[0].value == str(len(entries) + 1)
-    assert at.dataframe  # taste tables render
+    assert at.dataframe  # preference tables render
 
 
 def test_sidebar_exclusions_save_choices(db):

@@ -7,8 +7,10 @@ import {
   MemoryStore,
   makeFilters,
   makeRunOptions,
+  parseCrowd,
   run,
 } from "../src/index.ts";
+import crowdFixture from "./fixtures/crowd.json";
 import fixture from "./fixtures/parity.json";
 
 interface Scenario {
@@ -16,6 +18,8 @@ interface Scenario {
   type: MediaType;
   includeAdult?: boolean;
   filters: Partial<Filters>;
+  /** Runs with the made-up crowd table (fixtures/crowd.bin). */
+  crowd?: boolean;
 }
 
 interface Expected {
@@ -51,6 +55,10 @@ const { world, scenarios, results, limit } = fixture as unknown as {
   limit: number;
 };
 const TOLERANCE = 1e-3;
+// The made-up crowd table the lab ran its crowd scenarios with (base64 of the table file).
+const crowdTable = parseCrowd(
+  Uint8Array.from(atob(crowdFixture.table), (c) => c.charCodeAt(0)).buffer,
+);
 
 async function load(w: World): Promise<MemoryStore> {
   const store = new MemoryStore();
@@ -78,6 +86,7 @@ describe("the engine ranks like the lab", () => {
         discover: false,
         includeAdult: s.includeAdult ?? false,
         filters: makeFilters(s.filters),
+        crowd: s.crowd ? crowdTable : null,
       });
       const got = await run(await load(world), null, world.user, s.type, options);
 

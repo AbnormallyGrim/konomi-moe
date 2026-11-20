@@ -2,6 +2,7 @@
 
 import { type AniListClient, AniListError } from "./anilist/client.ts";
 import * as q from "./anilist/queries.ts";
+import { type CrowdTable, crowdPicks } from "./crowd.ts";
 import {
   type Exclusions,
   excludedGenres,
@@ -23,11 +24,19 @@ import {
   scoreAccepts,
   seenAdaptations,
 } from "./filters.ts";
-import { type ListEntry, type Media, type MediaType, otherType, prequelIds } from "./models.ts";
+import {
+  type ListEntry,
+  type Media,
+  type MediaType,
+  otherType,
+  prequelIds,
+  sequelIds,
+} from "./models.ts";
 import {
   buildProfile,
   candidateSources,
   discoveryTags,
+  isMinor,
   type Profile,
   type Recommendation,
   rank,
@@ -52,6 +61,11 @@ export interface RunOptions {
   discover: boolean;
   includeAdult: boolean;
   filters: Filters;
+  /**
+   * Anime: the crowd table (`parseCrowd` of `engine/assets/crowd.bin`), for picks learned from
+   * other people's lists plus places for new releases. Without it, ranking works as before.
+   */
+  crowd?: CrowdTable | null;
 }
 
 /** Ranked picks, the profile behind them, and any steps that failed. */
@@ -59,6 +73,8 @@ export interface RunResult {
   recommendations: Recommendation[];
   profile: Profile;
   warnings: string[];
+  /** The crowd's picks were used. */
+  crowd: boolean;
 }
 
 /** The user has no synced list for this media type. */
@@ -104,6 +120,7 @@ export async function run(
   const { filters } = options;
   const extra: [number, string][] = [];
   const warnings: string[] = [];
+  const picks = type === "ANIME" && options.crowd ? crowdPicks(options.crowd, entries) : null;
 
   let excluded: Exclusions;
   try {
@@ -158,14 +175,30 @@ export async function run(
         : filters.countries.length > 1
           ? filters.countries.map((c) => ({ ...asked, countryOfOrigin: c }))
           : [asked];
-      // The tag searches and every filter search's first page go out in one request.
+      // New releases, which the crowd's lists predate: the best-scored since then, two pages.
+      const since = picks ? (picks.freshYear - 1) * 10000 + 1231 : 0;
+      const freshVariables = {
+        ...base,
+        startGreater: Math.max(Number((base as Record<string, unknown>).startGreater ?? 0), since),
+      };
+      const freshSearches: Search[] = picks
+        ? [1, 2].map((page) => ({ variables: freshVariables, perPage: 50, page }))
+        : [];
+      // The tag searches, the new-release pages and every filter search's first page go out
+      // in one request.
       progress(tagSearches.length ? "Searching AniList by your top tags" : "Searching AniList");
       const first = await discoverMany(online, store, type, [
         ...tagSearches,
+        ...freshSearches,
         ...filterSearches.map((variables) => ({ variables, perPage: 50, page: 1 })),
       ]);
       for (const [i, tag] of tags.entries())
         for (const m of first[i] ?? []) extra.push([m.id, `top-scored with ${tag}`]);
+      if (picks) {
+        const page1 = first[tags.length] ?? [];
+        const pages = page1.length < 50 ? [page1] : [page1, first[tags.length + 1] ?? []];
+        for (const m of pages.flat()) extra.push([m.id, `new since ${picks.freshYear}`]);
+      }
       const forFilters = (found: Media[]) => {
         for (const m of found) extra.push([m.id, "top-scored for your filters"]);
         return found.filter((m) => filterAccepts(filters, m, themes)).length;
@@ -173,7 +206,7 @@ export async function run(
       // Rare combinations (two main themes, say) pass few titles per page, so a search whose
       // first page was full and passed too few gets its remaining pages, all in one request.
       const more = filterSearches.flatMap((variables, j) => {
-        const found = first[tags.length + j] ?? [];
+        const found = first[tags.length + freshSearches.length + j] ?? [];
         const passed = forFilters(found);
         if (found.length < 50 || passed >= options.limit) return [];
         return Array.from({ length: FILTER_PAGES - 1 }, (_, k) => ({
@@ -194,7 +227,23 @@ export async function run(
 
   progress("Ranking");
   const links = await store.recommendationsFrom(profile.likedIds);
-  const sources = candidateSources(profile, links, { extra, includeListed: !filters.hideListed });
+  const sources = candidateSources(profile, links, {
+    extra,
+    includeListed: !filters.hideListed,
+    crowd: picks,
+  });
+  if (picks && online) {
+    try {
+      await fetchMedia(
+        online,
+        store,
+        picks.picks.map(([root]) => root),
+      );
+    } catch (e) {
+      if (!(e instanceof AniListError)) throw e;
+      warnings.push(`some of the crowd's picks skipped: ${e.message}`);
+    }
+  }
   await load(store, cache, sources.keys());
   await loadPrequelChains(store, cache, sources.keys(), online, warnings);
 
@@ -224,9 +273,10 @@ export async function run(
     lookup: lookupIn(cache),
     accept,
     includeListed: !filters.hideListed,
+    crowd: picks,
   });
   if (online) recs = await fillDetails(online, store, recs, warnings);
-  return { recommendations: recs, profile, warnings };
+  return { recommendations: recs, profile, warnings, crowd: picks !== null };
 }
 
 /** The user's exclusions, with sequels followed; a client fetches uncached links. */
@@ -305,7 +355,8 @@ async function load(
 
 /**
  * Load each candidate's prequels, link by link, so excluded series can be traced and a sequel
- * of an unwatched season can be swapped for its first season. A client fetches uncached ones.
+ * of an unwatched season can be swapped for its first season; and the sequels of specials, OVAs
+ * and music videos, to find the series they belong to. A client fetches uncached ones.
  */
 async function loadPrequelChains(
   store: Store,
@@ -320,7 +371,9 @@ async function loadPrequelChains(
     const next = new Set<number>();
     for (const id of frontier) {
       const m = cache.get(id);
-      if (m) for (const p of prequelIds(m)) if (!seen.has(p)) next.add(p);
+      if (!m) continue;
+      for (const p of [...prequelIds(m), ...(isMinor(m) ? sequelIds(m) : [])])
+        if (!seen.has(p)) next.add(p);
     }
     if (!next.size) break;
     if (client) {

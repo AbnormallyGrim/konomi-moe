@@ -131,17 +131,17 @@ describe("Session", () => {
     expect(next?.recommendations.map((r) => r.media.id)).not.toContain(top.id);
   });
 
-  it("summarises taste with the strongest likes and dislikes", async () => {
+  it("summarises preferences with the strongest likes and dislikes", async () => {
     const { catalog, lists } = world();
     const { host } = fakeHost(lists);
     const session = await Session.open(host, "Someone", fakeClient({ catalog }).client);
     await session.sync();
-    const taste = await session.tasteFor("ANIME");
-    expect(taste?.onList).toBe(12);
-    expect(taste?.likes.map(([k]) => k)).toContain("tag:Iyashikei");
-    expect(taste?.dislikes.map(([k]) => k)).toContain("tag:Harem");
-    expect(taste?.likedTags).toContain("Iyashikei");
-    expect(await session.tasteFor("MANGA")).toBeNull();
+    const preferences = await session.preferencesFor("ANIME");
+    expect(preferences?.onList).toBe(12);
+    expect(preferences?.likes.map(([k]) => k)).toContain("tag:Iyashikei");
+    expect(preferences?.dislikes.map(([k]) => k)).toContain("tag:Harem");
+    expect(preferences?.likedTags).toContain("Iyashikei");
+    expect(await session.preferencesFor("MANGA")).toBeNull();
   });
 });
 
@@ -160,7 +160,7 @@ describe("stats per list", () => {
     const { host } = fakeHost(lists);
     const session = await Session.open(host, "Someone", fakeClient({ catalog }).client);
     await session.sync();
-    const keys = async (t: MediaType) => (await session.tasteFor(t))?.likes.map(([k]) => k) ?? [];
+    const keys = async (t: MediaType) => (await session.preferencesFor(t))?.likes.map(([k]) => k) ?? [];
     const anime = await keys("ANIME");
     const mangaLikes = await keys("MANGA");
     expect(anime).toContain("tag:Iyashikei");
@@ -248,7 +248,7 @@ describe("not interested", () => {
     const first = await session.recommend("ANIME");
     const top = first?.recommendations[0]?.media;
     if (!top) throw new Error("no picks");
-    const before = (await session.tasteFor("ANIME"))?.likes ?? [];
+    const before = (await session.preferencesFor("ANIME"))?.likes ?? [];
 
     const left = await session.notInterested(top);
     expect(left.ANIME?.recommendations.map((r) => r.media.id)).not.toContain(top.id);
@@ -258,7 +258,7 @@ describe("not interested", () => {
 
     // The candidates share the user's liked tag, so dismissing one weakens it.
     await session.recommend("ANIME");
-    const after = (await session.tasteFor("ANIME"))?.likes ?? [];
+    const after = (await session.preferencesFor("ANIME"))?.likes ?? [];
     const weight = (rows: [string, number][]) =>
       rows.find(([k]) => k === "tag:Iyashikei")?.[1] ?? 0;
     expect(weight(after)).toBeLessThan(weight(before));

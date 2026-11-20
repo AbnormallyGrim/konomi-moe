@@ -8,6 +8,7 @@
  * install from the raw GitHub link, and Seanime's update check fetches the same link.
  */
 
+import { createHash } from "node:crypto";
 import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,7 +51,22 @@ const MANIFEST_URI = RELEASE
 const ICON_FILE = `${ID}.png`;
 const ICON = new URL(ICON_FILE, MANIFEST_URI).href;
 
-await vite({ root, configFile: join(root, "vite.config.ts"), logLevel: "warn" });
+/**
+ * The crowd table (engine/assets/crowd.bin: picks learned from other people's anime lists) is
+ * too big to inline (21 MB), so the page fetches it from next to the manifest, as it already
+ * fetches AniList: no plugin permission needed. Its name carries a hash of its contents, so a
+ * new table never pairs with old code through raw.githubusercontent.com's short cache.
+ */
+const crowdBytes = await readFile(join(root, "../engine/assets/crowd.bin"));
+const CROWD_FILE = `crowd-${createHash("sha256").update(crowdBytes).digest("hex").slice(0, 12)}.bin`;
+const CROWD_URL = new URL(CROWD_FILE, MANIFEST_URI).href;
+
+await vite({
+  root,
+  configFile: join(root, "vite.config.ts"),
+  logLevel: "warn",
+  define: { __CROWD_URL__: JSON.stringify(CROWD_URL) },
+});
 const html = await readFile(join(root, "dist/page/index.html"), "utf8");
 if (!html.includes("<head>")) throw new Error("the page needs a <head> for Seanime's bridge");
 
@@ -91,6 +107,7 @@ await mkdir(join(root, "dist"), { recursive: true });
 const out = join(root, "dist", `${ID}.json`);
 await writeFile(out, `${JSON.stringify(manifest, null, 2)}\n`);
 await copyFile(join(root, "assets/icon-128.png"), join(root, "dist", ICON_FILE));
+await writeFile(join(root, "dist", CROWD_FILE), crowdBytes);
 if (RELEASE) {
   // The release keeps the code in its own file (payloadURI) so it can be read and diffed.
   // Seanime downloads it once at install and stores it inline, and skips it on update checks.
@@ -110,8 +127,17 @@ if (RELEASE) {
     .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }))
     .slice(1);
   for (const f of old) await rm(join(dir, f));
+  // The table this release's page fetches, and none that no kept code still points at.
+  await writeFile(join(dir, CROWD_FILE), crowdBytes);
+  const kept = await Promise.all(
+    (await readdir(dir))
+      .filter((f) => f.startsWith(`${ID}-`) && f.endsWith(".js"))
+      .map((f) => readFile(join(dir, f), "utf8")),
+  );
+  for (const f of (await readdir(dir)).filter((f) => /^crowd-.*\.bin$/.test(f)))
+    if (!kept.some((code) => code.includes(f))) await rm(join(dir, f));
   console.log(
-    `release: seanime/release/${ID}.json + ${payloadFile} (version ${pkg.version}); commit both to main`,
+    `release: seanime/release/${ID}.json + ${payloadFile} + ${CROWD_FILE} (version ${pkg.version}); commit them to main`,
   );
 }
 console.log(

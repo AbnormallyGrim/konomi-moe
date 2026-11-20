@@ -5,6 +5,7 @@
 
 import {
   AniListClient,
+  type CrowdTable,
   type DetailsNode,
   emptyExclusions,
   examples,
@@ -21,6 +22,7 @@ import {
   makeRunOptions,
   NoSyncedList,
   type Progress,
+  parseCrowd,
   parseDetails,
   queries,
   type Recommendation,
@@ -91,8 +93,8 @@ export interface Picks {
   warnings: string[];
 }
 
-/** What the taste tab shows. */
-export interface Taste {
+/** What the preferences tab shows. */
+export interface Preferences {
   onList: number;
   scored: number;
   mean: number | null;
@@ -112,7 +114,8 @@ export class Session {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private themes: Themes | null = null;
   private details = new Map<number, TitleDetails>();
-  private taste = new Map<MediaType, Taste>();
+  private preferences = new Map<MediaType, Preferences>();
+  private crowd: Promise<{ table: CrowdTable | null; error?: string }> | null = null;
 
   private constructor(
     readonly host: Host,
@@ -149,7 +152,7 @@ export class Session {
       } else {
         await syncList(this.client, this.store, this.user, type, progress);
       }
-      this.taste.delete(type);
+      this.preferences.delete(type);
     }
     await this.store.setMeta(SYNCED_KEY, String(Date.now()));
     await this.save(true);
@@ -187,6 +190,7 @@ export class Session {
     pool = POOL,
   ): Promise<Picks | null> {
     const s = await this.settings();
+    const crowd = type === "ANIME" ? await this.crowdTable(progress) : { table: null };
     let result: RunResult;
     try {
       result = await run(
@@ -194,33 +198,55 @@ export class Session {
         this.client,
         this.user,
         type,
-        makeRunOptions({ limit: pool, includeAdult: s.includeAdult, filters: s.filters[type] }),
+        makeRunOptions({
+          limit: pool,
+          includeAdult: s.includeAdult,
+          filters: s.filters[type],
+          crowd: crowd.table,
+        }),
         progress,
       );
     } catch (e) {
       if (e instanceof NoSyncedList) return null;
       throw e;
     }
-    this.taste.set(type, tasteOf(result));
+    this.preferences.set(type, preferencesOf(result));
     const picks: Picks = {
       at: Date.now(),
       recommendations: result.recommendations,
-      warnings: result.warnings,
+      warnings: crowd.error ? [crowd.error, ...result.warnings] : result.warnings,
     };
     await this.store.setMeta(`ui-picks:${type}`, JSON.stringify(picks));
     await this.save();
     return picks;
   }
 
+  /** The host's crowd table, fetched and decoded once a session; never fails a run. */
+  private crowdTable(progress: Progress): Promise<{ table: CrowdTable | null; error?: string }> {
+    const load = this.host.crowdTable;
+    if (!load) return Promise.resolve({ table: null });
+    this.crowd ??= (async () => {
+      progress("Loading picks from other people's lists");
+      try {
+        return { table: parseCrowd(await load.call(this.host)) };
+      } catch (e) {
+        this.crowd = null; // try again next run
+        const why = e instanceof Error ? e.message : String(e);
+        return { table: null, error: `picks from other people's lists unavailable: ${why}` };
+      }
+    })();
+    return this.crowd;
+  }
+
   /** What the model learned for a type; runs offline if there's no run yet this session. */
-  async tasteFor(type: MediaType): Promise<Taste | null> {
-    const known = this.taste.get(type);
+  async preferencesFor(type: MediaType): Promise<Preferences | null> {
+    const known = this.preferences.get(type);
     if (known) return known;
     try {
       const result = await run(this.store, null, this.user, type, makeRunOptions({ limit: 1 }));
-      const taste = tasteOf(result);
-      this.taste.set(type, taste);
-      return taste;
+      const preferences = preferencesOf(result);
+      this.preferences.set(type, preferences);
+      return preferences;
     } catch (e) {
       if (e instanceof NoSyncedList) return null;
       throw e;
@@ -405,7 +431,7 @@ export class Session {
 /** A feature must appear on at least this many titles of a list to be shown for it. */
 const SHOWN_MIN_TITLES = 2;
 
-function tasteOf(result: RunResult): Taste {
+function preferencesOf(result: RunResult): Preferences {
   const { profile } = result;
   const own = profile.entries;
   // The model learns from both lists at once (that ranks better), so its weights are the same

@@ -12,8 +12,8 @@ import {
 import * as q from "./anilist/queries.ts";
 import type { ListEntry, Media, MediaType } from "./models.ts";
 import type { Progress } from "./pipeline.ts";
+import { examples, isLiked } from "./preference.ts";
 import type { Store } from "./store.ts";
-import { examples, isLiked } from "./taste.ts";
 
 /** Entries fetched per list request (AniList's maximum). */
 export const PER_CHUNK = 500;

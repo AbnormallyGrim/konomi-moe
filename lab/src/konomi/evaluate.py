@@ -11,7 +11,7 @@ from scipy.stats import spearmanr
 from sklearn.metrics import roc_auc_score
 
 from konomi.models import Media
-from konomi.taste import MIN_EXAMPLES, Example, TasteModel, community_weight
+from konomi.preference import MIN_EXAMPLES, Example, PreferenceModel, community_weight
 
 Predictor = Callable[[list[Media]], np.ndarray]
 Trainer = Callable[[list[Example]], Predictor]
@@ -79,20 +79,20 @@ def community() -> Trainer:
     return lambda _train: lambda items: np.array([m.average_score or 70 for m in items], float)
 
 
-def taste(
+def preference(
     alpha: float = 10.0,
     min_feature_count: int = 1,
     community: float | None = None,
     extra: Sequence[Example] = (),
 ) -> Trainer:
-    """The taste model plus `community` × the community score, as ranking does (prediction +
+    """The preference model plus `community` × the community score, as ranking does (prediction +
     weight × (average − 70) / 10). `None` uses ranking's size-aware weight; `extra` (the other
     list) always trains and is never graded."""
 
     def train(fit_on: list[Example]) -> Predictor:
         if len(fit_on) < MIN_EXAMPLES:
             return lambda items: np.zeros(len(items))
-        model = TasteModel(alpha, min_feature_count).fit([*fit_on, *extra])
+        model = PreferenceModel(alpha, min_feature_count).fit([*fit_on, *extra])
         weight = community_weight(len(fit_on)) if community is None else community
 
         def predict(items: list[Media]) -> np.ndarray:
@@ -116,6 +116,6 @@ def sweep(
         for min_count in (1, 2):
             for weight in (0.3, 0.6, 1.0, 2.0):
                 name = f"alpha {alpha:g} · min features {min_count} · community {weight:g}"
-                trainer = taste(alpha, min_count, weight, extra)
+                trainer = preference(alpha, min_count, weight, extra)
                 rows.append((name, cross_validate(examples, trainer, folds, truth=truth)))
     return sorted(rows, key=lambda r: r[1].auc, reverse=True)

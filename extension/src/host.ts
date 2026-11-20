@@ -50,6 +50,12 @@ export function extensionHost(initial: Auth | null, options: { page: boolean }):
     auth: initial,
     transport,
     embedsTrailers: options.page,
+    // Bundled with the extension (scripts/build.ts copies engine/assets/crowd.bin).
+    async crowdTable() {
+      const reply = await fetch(api().runtime.getURL("crowd.bin"));
+      if (!reply.ok) throw new Error(`the bundled table didn't load (${reply.status})`);
+      return reply.arrayBuffer();
+    },
     async user(): Promise<HostUser | null> {
       if (!host.auth) return null;
       if (options.page) host.auth = await withAvatar(host.auth);

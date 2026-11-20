@@ -26,6 +26,17 @@ export {
 } from "./anilist/parse.ts";
 export * as queries from "./anilist/queries.ts";
 export {
+  CROWD_CANDIDATES,
+  CROWD_VERSION,
+  type CrowdPicks,
+  type CrowdTable,
+  crowdPicks,
+  likedAndDisliked,
+  MIN_LIKED,
+  ORDER_WEIGHT,
+  parseCrowd,
+} from "./crowd.ts";
+export {
   type Character,
   type DetailsNode,
   KEY_STAFF_ROLES,
@@ -93,12 +104,36 @@ export {
   tagCategories,
 } from "./pipeline.ts";
 export {
+  COMMUNITY_WEIGHT,
+  communityWeight,
+  DEFAULT_LABELS,
+  DEFAULT_MEAN,
+  type Example,
+  examples,
+  FULL_LIST,
+  features,
+  isLiked,
+  type Labels,
+  label,
+  MAX_COMMUNITY_WEIGHT,
+  MIN_EXAMPLES,
+  NotEnoughHistory,
+  notInterestedExamples,
+  PreferenceModel,
+  truth,
+  userMean,
+} from "./preference.ts";
+export {
   blendScore,
   buildProfile,
   candidateSources,
   discoveryTags,
   FINISHED,
   HIDDEN_REASONS,
+  isMinor,
+  MINOR_FORMATS,
+  mainPrequels,
+  mainSuccessor,
   type Profile,
   type RankOptions,
   type Reason,
@@ -108,6 +143,7 @@ export {
   seriesStart,
   seriesStarts,
   UNFINISHED,
+  unlocked,
 } from "./recommend.ts";
 export { fitRidge, predictRow, type RidgeFit, type SparseRow, solveSpd } from "./ridge.ts";
 export {
@@ -129,26 +165,6 @@ export {
   syncEntries,
   syncList,
 } from "./sync.ts";
-export {
-  COMMUNITY_WEIGHT,
-  communityWeight,
-  DEFAULT_LABELS,
-  DEFAULT_MEAN,
-  type Example,
-  examples,
-  FULL_LIST,
-  features,
-  isLiked,
-  type Labels,
-  label,
-  MAX_COMMUNITY_WEIGHT,
-  MIN_EXAMPLES,
-  NotEnoughHistory,
-  notInterestedExamples,
-  TasteModel,
-  truth,
-  userMean,
-} from "./taste.ts";
 export {
   GENRE_CATEGORIES,
   GENRE_ONLY,

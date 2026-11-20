@@ -10,6 +10,9 @@ export interface Bridge {
   on(event: string, callback: (payload: unknown) => void): () => void;
 }
 
+/** Where the crowd table is published, next to the manifest (set by scripts/build.ts). */
+declare const __CROWD_URL__: string | undefined;
+
 /** How long to wait for the plugin before giving up on a request. */
 export const TIMEOUT_MS = 60_000;
 /** How often the page asks how the plugin's first-run sync is getting on. */
@@ -90,5 +93,14 @@ export function seanimeHost(bridge: Bridge, timeoutMs = TIMEOUT_MS, pollMs = SET
     openTrailer: async (media: Media, trailer: Trailer) => {
       await call("openTrailer", trailer.url, media.titles?.english ?? media.title);
     },
+    // Fetched straight from the frame, like AniList (raw.githubusercontent.com allows any
+    // origin); the browser's cache keeps it between visits.
+    ...(typeof __CROWD_URL__ === "string" ? { crowdTable: () => fetchTable(__CROWD_URL__) } : {}),
   };
+}
+
+async function fetchTable(url: string): Promise<ArrayBuffer> {
+  const reply = await fetch(url);
+  if (!reply.ok) throw new Error(`the table didn't download (${reply.status})`);
+  return reply.arrayBuffer();
 }

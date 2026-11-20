@@ -1,7 +1,7 @@
 import pytest
 
 from konomi.models import ListEntry, ListStatus, MediaType
-from konomi.taste import NotEnoughHistory, TasteModel, examples, label
+from konomi.preference import NotEnoughHistory, PreferenceModel, examples, label
 from tests.conftest import make_media
 
 SHOW = make_media(1, episodes=24)
@@ -32,7 +32,7 @@ def test_drop_with_unknown_length_uses_fair_go():
 def test_needs_enough_history():
     media = {1: SHOW}
     with pytest.raises(NotEnoughHistory):
-        TasteModel().fit(examples([ListEntry(1, ListStatus.COMPLETED, 80)], media))
+        PreferenceModel().fit(examples([ListEntry(1, ListStatus.COMPLETED, 80)], media))
 
 
 def test_learns_liked_and_disliked_tags():
@@ -44,7 +44,7 @@ def test_learns_liked_and_disliked_tags():
         media[i] = make_media(i, ["Harem", "Isekai"], ["Fantasy"])
         entries.append(ListEntry(i, ListStatus.DROPPED, progress=1))
 
-    model = TasteModel().fit(examples(entries, media))
+    model = PreferenceModel().fit(examples(entries, media))
     weights = dict(model.weights())
     assert weights["tag:Iyashikei"] > 0 > weights["tag:Harem"]
 
@@ -56,7 +56,7 @@ def test_learns_liked_and_disliked_tags():
 
 
 def test_community_weight_grows_for_short_lists():
-    from konomi.taste import community_weight
+    from konomi.preference import community_weight
 
     assert community_weight(325) == community_weight(150) == 0.6
     assert round(community_weight(46), 2) == 1.96

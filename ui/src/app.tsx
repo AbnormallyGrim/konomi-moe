@@ -25,9 +25,9 @@ import {
   displayTitle,
   type Picks,
   POOL,
+  type Preferences,
   Session,
   type Settings,
-  type Taste,
   type TitleLanguage,
   TYPES,
 } from "./session.ts";
@@ -1509,7 +1509,7 @@ function TagPicker(props: {
     props.session.tagNames().then(setAll);
   }, [props.session]);
   useEffect(() => {
-    props.session.tasteFor(props.kind).then(
+    props.session.preferencesFor(props.kind).then(
       (t) => setYours(t?.likedTags.slice(0, 8) ?? []),
       () => setYours([]),
     );
@@ -2024,11 +2024,11 @@ function Metric({ name, value }: { name: string; value: string }) {
 /* Stats */
 
 function StatsView(props: { session: Session; kind: MediaType; setKind: (k: MediaType) => void }) {
-  const [taste, setTaste] = useState<Taste | null | undefined>(undefined);
+  const [preferences, setPreferences] = useState<Preferences | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    setTaste(undefined);
-    props.session.tasteFor(props.kind).then(setTaste, (e) => setError(errorText(e)));
+    setPreferences(undefined);
+    props.session.preferencesFor(props.kind).then(setPreferences, (e) => setError(errorText(e)));
   }, [props.session, props.kind]);
 
   const bars = (rows: [string, number][], colour: string) => {
@@ -2056,7 +2056,7 @@ function StatsView(props: { session: Session; kind: MediaType; setKind: (k: Medi
         <div>
           <h1>Stats</h1>
           <div class="sub">
-            {taste
+            {preferences
               ? `Learned from your anime and manga lists together; showing what appears in your ${kindWord(props.kind)} list`
               : "What the recommendations learned from your lists"}
           </div>
@@ -2074,33 +2074,35 @@ function StatsView(props: { session: Session; kind: MediaType; setKind: (k: Medi
         </div>
       </div>
       {error && <div class="warn error">{error}</div>}
-      {taste === undefined && !error && <LoadingOverlay busy={{ step: "Reading your list" }} />}
-      {taste === null && (
+      {preferences === undefined && !error && (
+        <LoadingOverlay busy={{ step: "Reading your list" }} />
+      )}
+      {preferences === null && (
         <div class="empty">
           <h2>No {kindWord(props.kind)} list yet</h2>
           <p>Sync your list from the For you page first.</p>
         </div>
       )}
-      {taste && (
+      {preferences && (
         <>
           <div class="stats">
-            <Stat name="On your list" value={String(taste.onList)} />
-            <Stat name="Scored" value={String(taste.scored)} />
+            <Stat name="On your list" value={String(preferences.onList)} />
+            <Stat name="Scored" value={String(preferences.scored)} />
             <Stat
               name="Your average"
-              value={taste.mean !== null ? taste.mean.toFixed(1) : "—"}
+              value={preferences.mean !== null ? preferences.mean.toFixed(1) : "—"}
               suffix=" / 10"
             />
-            <Stat name="Learned from" value={String(taste.learnedFrom)} />
+            <Stat name="Learned from" value={String(preferences.learnedFrom)} />
           </div>
           <div class="two">
             <div class="panel">
               <h2>You tend to enjoy</h2>
-              {bars(taste.likes, "linear-gradient(90deg, var(--accent), #a99cff)")}
+              {bars(preferences.likes, "linear-gradient(90deg, var(--accent), #a99cff)")}
             </div>
             <div class="panel">
               <h2>You tend to avoid</h2>
-              {bars(taste.dislikes, "linear-gradient(90deg, var(--accent-2), #ff9cc0)")}
+              {bars(preferences.dislikes, "linear-gradient(90deg, var(--accent-2), #ff9cc0)")}
             </div>
           </div>
         </>

@@ -83,7 +83,7 @@ export function requiredLabels(f: Filters): Set<string> {
 /**
  * Whether any title filter is set; `mainTheme`, `minTagRank`, `minScore` and the list-based flags
  * alone don't count. A minimum score alone would make the filter search return AniList's
- * top-scored titles, which says nothing about the user's taste.
+ * top-scored titles, which says nothing about the user's preferences.
  */
 export function filtersActive(f: Filters): boolean {
   return Boolean(

@@ -50,6 +50,8 @@ for (const target of ["chrome", "firefox"] as Target[]) {
   await cp(staging, out, { recursive: true });
   for (const size of [16, 32, 48, 128])
     await copyFile(join(root, `assets/icon-${size}.png`), join(out, `icon-${size}.png`));
+  // The crowd table: picks learned from other people's anime lists (engine/crowd.ts).
+  await copyFile(join(root, "../engine/assets/crowd.bin"), join(out, "crowd.bin"));
   const m = manifest(target, pkg.version, target === "chrome" && key ? { key } : {});
   await writeFile(join(out, "manifest.json"), `${JSON.stringify(m, null, 2)}\n`);
   if (zipAvailable) {

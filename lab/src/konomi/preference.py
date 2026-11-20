@@ -1,4 +1,4 @@
-"""Learns a user's taste from their list: labels, features and the model."""
+"""Learns a user's preferences from their list: labels, features and the model."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ DEFAULT_LABELS = Labels()
 def label(
     entry: ListEntry, media: Media, mean: float, labels: Labels = DEFAULT_LABELS
 ) -> tuple[float, float] | None:
-    """`(target, weight)` for an entry, or `None` if it says nothing about taste."""
+    """`(target, weight)` for an entry, or `None` if it says nothing about preferences."""
     rewatched = entry.repeat > 0 or entry.status is ListStatus.REPEATING
     if entry.status is ListStatus.PLANNING:
         return None
@@ -151,7 +151,7 @@ class NotEnoughHistory(Exception):
     """The list has too few usable entries to learn from."""
 
 
-class TasteModel:
+class PreferenceModel:
     """Ridge regression from title features to how much the user likes it."""
 
     def __init__(self, alpha: float = 10.0, min_feature_count: int = 1) -> None:
@@ -160,7 +160,7 @@ class TasteModel:
         self._vec = DictVectorizer()
         self._model = Ridge(alpha=alpha)
 
-    def fit(self, train: list[Example]) -> TasteModel:
+    def fit(self, train: list[Example]) -> PreferenceModel:
         """Fit on examples; features seen on fewer than `min_feature_count` titles are dropped."""
         if len(train) < MIN_EXAMPLES:
             raise NotEnoughHistory(f"need at least {MIN_EXAMPLES} rated titles, got {len(train)}")

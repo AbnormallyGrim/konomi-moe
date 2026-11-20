@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from konomi import exclusions
+from konomi import crowd, exclusions
 from konomi.anilist import AniListClient, AniListError
 from konomi.filters import Filters, listed_versions, seen_adaptations
 from konomi.models import Media, MediaType
@@ -25,6 +25,8 @@ class RunOptions:
     offline_picks: int = 100
     include_adult: bool = False
     filters: Filters = field(default_factory=Filters)
+    # Anime: picks learned from other people's lists, plus places for new releases (crowd.py).
+    crowd: bool = True
 
 
 @dataclass
@@ -34,6 +36,7 @@ class RunResult:
     recommendations: list[Recommendation]
     profile: Profile
     warnings: list[str] = field(default_factory=list)
+    crowd: bool = False  # the crowd's picks were used
 
 
 class NoSyncedList(Exception):
@@ -68,6 +71,9 @@ def run(
         excluded = exclusions.load(store, user, media_type)
 
     filters = options.filters
+    picks = None
+    if media_type is MediaType.ANIME and options.crowd and (table := crowd.load()) is not None:
+        picks = crowd.picks(table, entries)
     try:
         themes = Themes(tag_categories(store, online))
     except AniListError as e:
@@ -89,6 +95,13 @@ def run(
                 tags = [tag, *filters.tags]
                 found = discover(online, store, media_type, {**base, "tagIn": tags}, per_page=30)
                 extra += [(m.id, f"top-scored with {tag}") for m in found]
+            if picks:
+                # New releases, which the crowd's lists predate: the best-scored since then.
+                progress("Searching AniList for new releases")
+                since = (picks.fresh_year - 1) * 10000 + 1231
+                fresh = {**base, "startGreater": max(base.get("startGreater") or 0, since)}
+                found = discover(online, store, media_type, fresh, per_page=50, pages=2)
+                extra += [(m.id, f"new since {picks.fresh_year}") for m in found]
             if filters.active:
                 progress("Searching AniList with your filters")
                 found = discover(online, store, media_type, base, pages=2)
@@ -149,10 +162,11 @@ def run(
         accept,
         include_listed=not filters.hide_listed,
         fetch=fetch,
+        crowd=picks,
     )
     if online:
         recs = _fill_details(online, store, recs, warnings)
-    return RunResult(recs, profile, warnings)
+    return RunResult(recs, profile, warnings, crowd=picks is not None)
 
 
 def _fill_details(

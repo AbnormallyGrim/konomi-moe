@@ -5,7 +5,7 @@ import {
   features,
   label,
   NotEnoughHistory,
-  TasteModel,
+  PreferenceModel,
   truth,
   userMean,
 } from "../src/index.ts";
@@ -78,17 +78,17 @@ describe("features", () => {
   });
 });
 
-describe("TasteModel", () => {
+describe("PreferenceModel", () => {
   it("needs enough history", () => {
     const { map } = catalog([SHOW]);
-    expect(() => new TasteModel().fit(examples([entry(1, "COMPLETED", 80)], map))).toThrow(
+    expect(() => new PreferenceModel().fit(examples([entry(1, "COMPLETED", 80)], map))).toThrow(
       NotEnoughHistory,
     );
   });
 
   it("learns liked and disliked tags and explains predictions", () => {
     const { media, entries } = seed();
-    const model = new TasteModel().fit(examples(entries, catalog(media).map));
+    const model = new PreferenceModel().fit(examples(entries, catalog(media).map));
     const weights = new Map(model.weights());
     expect(weights.get("tag:Iyashikei")).toBeGreaterThan(0);
     expect(weights.get("tag:Harem")).toBeLessThan(0);

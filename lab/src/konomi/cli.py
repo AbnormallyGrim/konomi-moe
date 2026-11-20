@@ -20,10 +20,10 @@ from konomi.filters import Filters
 from konomi.models import MediaType
 from konomi.offline import read_offline_db
 from konomi.pipeline import NoSyncedList, RunOptions, run
+from konomi.preference import NotEnoughHistory, examples, truth
 from konomi.recommend import build_profile
 from konomi.store import Store
 from konomi.sync import sync_list
-from konomi.taste import NotEnoughHistory, examples, truth
 
 app = typer.Typer(help="Anime and manga recommendations learned from your AniList list.")
 console = Console()
@@ -90,6 +90,14 @@ def recommend_cmd(
         bool,
         typer.Option(help="Hide titles whose manga/anime counterpart you've finished."),
     ] = False,
+    crowd: Annotated[
+        bool,
+        typer.Option(
+            "--crowd/--no-crowd",
+            help="Anime: picks learned from other people's lists, with places for new releases "
+            "(--no-crowd: the earlier ranking, for comparison).",
+        ),
+    ] = True,
     db: DbOption = Path("data/konomi.sqlite"),
     rpm: RpmOption = 30,
 ) -> None:
@@ -106,7 +114,7 @@ def recommend_cmd(
         hide_listed,
         hide_seen,
     )
-    options = RunOptions(limit, discover_more, offline_picks, adult, filters)
+    options = RunOptions(limit, discover_more, offline_picks, adult, filters, crowd)
     try:
         with _client(rpm) as client, console.status("Working") as status:
             result = run(store, client, user, media_type, options, progress=status.update)
@@ -118,7 +126,8 @@ def recommend_cmd(
     for w in result.warnings:
         console.print(f"[yellow]Warning:[/] {w}")
     recs = result.recommendations
-    table = Table(title=f"Top {media_type.value.lower()} picks for {user}")
+    how = " (with picks from other people's lists)" if result.crowd else ""
+    table = Table(title=f"Top {media_type.value.lower()} picks for {user}{how}")
     table.add_column("#", justify="right")
     table.add_column("Title")
     table.add_column("AniList", justify="right")
@@ -178,12 +187,12 @@ def evaluate(
         rows = [
             ("Community score only", ev.cross_validate(train, ev.community(), folds, truth=key)),
             (
-                "Taste model only",
-                ev.cross_validate(train, ev.taste(community=0, extra=extra), folds, truth=key),
+                "Preference model only",
+                ev.cross_validate(train, ev.preference(community=0, extra=extra), folds, truth=key),
             ),
             (
-                "Taste model + community (as ranked)",
-                ev.cross_validate(train, ev.taste(extra=extra), folds, truth=key),
+                "Preference model + community (as ranked)",
+                ev.cross_validate(train, ev.preference(extra=extra), folds, truth=key),
             ),
         ]
         if sweep_settings:

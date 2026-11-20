@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import IO, Any
 
 from konomi.anilist import AniListClient
+from konomi.preference import PreferenceModel
 from konomi.store import Store
 from konomi.sync import fetch_media
-from konomi.taste import TasteModel
 
 ANILIST_ID = re.compile(r"^https://anilist\.co/anime/(\d+)$")
 TAG_WEIGHT = 0.6  # the database has no tag ranks; roughly an average AniList rank
@@ -96,7 +96,7 @@ def prescore(weights: dict[str, float], anime: OfflineAnime) -> float:
 
 def top_ids(
     store: Store,
-    model: TasteModel,
+    model: PreferenceModel,
     exclude: set[int],
     n: int,
     include_adult: bool = False,
@@ -122,7 +122,7 @@ def top_ids(
 
 def offline_candidates(
     store: Store,
-    model: TasteModel,
+    model: PreferenceModel,
     exclude: set[int],
     n: int,
     client: AniListClient | None = None,

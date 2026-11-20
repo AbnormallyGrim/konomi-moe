@@ -103,6 +103,55 @@ describe("rank", () => {
     expect(recs.get(60)?.sources).toEqual(["liked Test Show 1"]);
   });
 
+  it("never lets a special, OVA or music video hold back or start a series", () => {
+    const title = (id: number, format: string, prequel?: number, sequel?: number, name?: string) =>
+      makeMedia(id, ["Iyashikei"], ["Slice of Life"], {
+        format,
+        relations: [
+          ...(prequel ? [rel("PREQUEL", prequel)] : []),
+          ...(sequel ? [rel("SEQUEL", sequel)] : []),
+        ],
+        ...(name ? { title: name } : {}),
+      });
+    // Like Attack on Titan: an OVA set before season 1 (released later), season 1, season 2.
+    const { entries, map, lookup } = setup([
+      title(100, "OVA", undefined, 101, "The OVA"),
+      title(101, "TV", 100, 102, "Season 1"),
+      title(102, "TV", 101),
+      // A recap special between a finished season and the next.
+      title(110, "TV", undefined, 111),
+      title(111, "SPECIAL", 110, 112),
+      title(112, "TV", 111, undefined, "Next Season"),
+      title(120, "OVA", undefined, undefined, "A Lone OVA"),
+      // An OVA-only series in two parts: part 2 still waits for part 1.
+      title(140, "OVA", undefined, 141, "OVA Part 1"),
+      title(141, "OVA", 140),
+    ]);
+    const links: [number, number, number][] = [
+      [1, 101, 9], [1, 100, 8], [1, 102, 7], [1, 112, 6], [1, 111, 5], [1, 120, 4], [1, 141, 3],
+    ]; // biome-ignore format: compact link table
+    const run = (extra: ReturnType<typeof entry>[]) => {
+      const profile = buildProfile([...entries, ...extra], map);
+      return new Map(
+        rank(profile, candidateSources(profile, links), map, { lookup }).map((r) => [
+          r.media.id,
+          r,
+        ]),
+      );
+    };
+
+    // Season 1 itself, not the OVA (whose link joins it); the special stands in for the next
+    // season instead of holding it back; the lone OVA is a series of its own.
+    const recs = run([entry(110, "COMPLETED", 80)]);
+    const shown = [100, 101, 102, 110, 111, 112, 120, 140, 141].filter((id) => recs.has(id));
+    expect(shown).toEqual([101, 112, 120, 140]);
+    expect(recs.get(101)?.sources).toEqual(["liked Test Show 1"]);
+
+    // Once season 1 is finished, the OVA set before it is extra, and season 2 is next.
+    const after = run([entry(110, "COMPLETED", 80), entry(101, "COMPLETED", 80)]);
+    expect(after.has(100) && after.has(102) && !after.has(101)).toBe(true);
+  });
+
   it("adds only unfinished list titles when asked", () => {
     const statuses = [
       ["PLANNING", 24],

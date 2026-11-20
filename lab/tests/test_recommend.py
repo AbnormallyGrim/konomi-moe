@@ -168,3 +168,67 @@ def test_not_interested_titles_train_as_dislikes_unless_listed(store):
     # A dismissed title that's on the list is labelled by the list alone.
     on_list = build_profile(store, entries, not_interested=[1])
     assert dict(on_list.model.weights()) == pytest.approx(plain)
+
+
+def test_minor_prequels_never_hold_back_or_start_a_series(store):
+    entries = seed(store)
+
+    def title(i, fmt, prequel=None, sequel=None, name=None):
+        relations = [Relation("PREQUEL", prequel, None)] if prequel else []
+        relations += [Relation("SEQUEL", sequel, None)] if sequel else []
+        return make_media(
+            i, ["Iyashikei"], ["Slice of Life"], format=fmt, relations=relations, title=name
+        )
+
+    # Like Attack on Titan: an OVA set before season 1 (released later), season 1, season 2.
+    store.upsert_media(
+        [
+            title(100, "OVA", sequel=101, name="The OVA"),
+            title(101, "TV", prequel=100, sequel=102, name="Season 1"),
+            title(102, "TV", prequel=101),
+            # A recap special between two seasons the user has half-watched.
+            title(110, "TV", sequel=111),
+            title(111, "SPECIAL", prequel=110, sequel=112),
+            title(112, "TV", prequel=111, name="Next Season"),
+            title(120, "OVA", name="A Lone OVA"),
+            # An OVA-only series in two parts: part 2 still waits for part 1.
+            title(140, "OVA", sequel=141, name="OVA Part 1"),
+            title(141, "OVA", prequel=140),
+        ]
+    )
+    entries.append(ListEntry(110, ListStatus.COMPLETED, 80))
+    store.replace_recommendations(
+        {1: [(101, 9), (100, 8), (102, 7), (112, 6), (111, 5), (120, 4), (141, 3)]}
+    )
+
+    recs = {r.media.id: r for r in recommend(store, build_profile(store, entries))}
+    # Season 1 itself, not the OVA it would once have walked back to (the OVA's link joins it);
+    # season 2 needs season 1; the recap special doesn't hold the next season back, and stands in
+    # for it; the lone OVA is a series of its own.
+    shown = recs.keys() & {100, 101, 102, 110, 111, 112, 120, 140, 141}
+    assert shown == {101, 112, 120, 140}
+    assert recs[101].sources == ["liked Test Show 1"]
+
+    # Once season 1 is finished, the OVA set before it is extra too, and season 2 is next.
+    entries.append(ListEntry(101, ListStatus.COMPLETED, 80))
+    recs = {r.media.id: r for r in recommend(store, build_profile(store, entries))}
+    assert {100, 102} <= recs.keys() and 101 not in recs
+
+
+def test_fetch_caches_the_series_an_ova_is_set_before(store):
+    entries = seed(store)
+    ova = make_media(130, ["Iyashikei"], format="OVA", relations=[Relation("SEQUEL", 131, None)])
+    store.upsert_media([ova])
+    store.replace_recommendations({1: [(130, 5)]})
+    asked = []
+
+    def fetch(ids):
+        asked.append(ids)
+        series = make_media(
+            131, ["Iyashikei"], format="TV", relations=[Relation("PREQUEL", 130, None)]
+        )
+        store.upsert_media([series])
+
+    recs = recommend(store, build_profile(store, entries), fetch=fetch)
+    assert asked == [{131}]
+    assert [r.media.id for r in recs] == [131]

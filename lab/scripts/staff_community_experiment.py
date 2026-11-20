@@ -5,7 +5,7 @@
    design, music; for manga story and art) as one feature per person, so a creator matches
    across anime and manga.
 2. How much AniList's average score should count, especially for manga, where the list is
-   small and the taste model alone doesn't beat the community score.
+   small and the preference model alone doesn't beat the community score.
 
 Usage, from lab/: uv run python -I scripts/staff_community_experiment.py data/konomi.sqlite \
     <staff cache json>
@@ -23,11 +23,11 @@ from pathlib import Path
 import numpy as np
 
 from konomi import evaluate as ev
-from konomi import taste
+from konomi import preference
 from konomi.anilist import AniListClient
 from konomi.models import MediaType
+from konomi.preference import community_weight, examples, truth
 from konomi.store import Store
-from konomi.taste import community_weight, examples, truth
 
 db_path, cache_path = sys.argv[1], Path(sys.argv[2])
 SEEDS = 10
@@ -76,7 +76,7 @@ covered = sum(1 for es in lists.values() for e in es if staff.get(e.media_id))
 total = sum(len(es) for es in lists.values())
 print(f"titles with key staff: {covered} of {total}")
 
-plain_features = taste.features
+plain_features = preference.features
 
 
 def with_staff(weight: float):
@@ -92,9 +92,9 @@ def with_staff(weight: float):
 def score(rows, train, key):
     print(f"  {'method':<46} {'AUC':>11} {'hit@10':>7} {'Spearman':>9}")
     for name, trainer, feats in rows:
-        taste.features = feats
+        preference.features = feats
         accs = [ev.cross_validate(train, trainer, 5, seed=s, truth=key) for s in range(SEEDS)]
-        taste.features = plain_features
+        preference.features = plain_features
         auc = [a.auc for a in accs]
         print(
             f"  {name:<46} {np.mean(auc):6.3f}±{np.std(auc):.3f}"
@@ -111,14 +111,20 @@ for kind in (MediaType.ANIME, MediaType.MANGA):
     print(f"\n{kind.value}: {len(train)} labelled, {len(key)} graded, current weight {current:.2f}")
     rows = [
         ("community score only", ev.community(), plain_features),
-        ("current model", ev.taste(extra=extra), plain_features),
-        ("current model + staff", ev.taste(extra=extra), with_staff(1.0)),
-        ("current model + staff (half weight)", ev.taste(extra=extra), with_staff(0.5)),
+        ("current model", ev.preference(extra=extra), plain_features),
+        ("current model + staff", ev.preference(extra=extra), with_staff(1.0)),
+        ("current model + staff (half weight)", ev.preference(extra=extra), with_staff(0.5)),
     ]
     for w in (0.3, 1.0, 2.0, 3.0, 5.0, 8.0):
-        rows.append((f"community weight {w:g}", ev.taste(community=w, extra=extra), plain_features))
         rows.append(
-            (f"community weight {w:g} + staff", ev.taste(community=w, extra=extra), with_staff(1.0))
+            (f"community weight {w:g}", ev.preference(community=w, extra=extra), plain_features)
+        )
+        rows.append(
+            (
+                f"community weight {w:g} + staff",
+                ev.preference(community=w, extra=extra),
+                with_staff(1.0),
+            )
         )
     score(rows, train, key)
 store.close()

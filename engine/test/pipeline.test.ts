@@ -229,6 +229,32 @@ describe("run", () => {
     expect(recs.get(300)?.sources).toEqual(["liked Tesuto 1"]);
   });
 
+  it("fetches the series an OVA is set before, and recommends the series instead", async () => {
+    const store = new MemoryStore();
+    const fake = user();
+    fake.catalog.set(
+      101,
+      node(101, {
+        format: "OVA",
+        relations: { edges: [{ relationType: "SEQUEL", node: { id: 300, type: "ANIME" } }] },
+      }),
+    );
+    fake.catalog.set(
+      300,
+      node(300, {
+        format: "TV",
+        relations: { edges: [{ relationType: "PREQUEL", node: { id: 101, type: "ANIME" } }] },
+      }),
+    );
+    const { client } = fakeClient(fake);
+    await syncList(client, store, "someone", "ANIME");
+    const result = await run(store, client, "someone", "ANIME");
+    const recs = new Map(result.recommendations.map((r) => [r.media.id, r]));
+
+    expect(recs.has(101)).toBe(false);
+    expect(recs.get(300)?.sources).toEqual(["liked Tesuto 1"]);
+  });
+
   it("pages filter searches until enough pass, one search per chosen country", async () => {
     const store = new MemoryStore();
     let next = 5000;

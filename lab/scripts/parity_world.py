@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import json
 import random
+import tempfile
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
-from konomi import exclusions
+import numpy as np
+
+from konomi import crowd, exclusions
 from konomi.filters import Filters
 from konomi.models import ListEntry, ListStatus, Media, MediaType, Relation, Tag
 from konomi.pipeline import RunOptions, run
@@ -82,14 +86,26 @@ SCENARIOS: list[dict[str, Any]] = [
         "type": "MANGA",
         "filters": {"hideSeenAdaptations": True},
     },
+    {"name": "anime, crowd's picks", "type": "ANIME", "filters": {}, "crowd": True},
+    {
+        "name": "anime, crowd's picks with unfinished list titles and a tag",
+        "type": "ANIME",
+        "filters": {"tags": ["Iyashikei"], "hideListed": False},
+        "crowd": True,
+    },
 ]
 LIMIT = 30
+# The crowd table's year from which titles count as new releases (the world's years run
+# 1995-2025, so a fifth of titles are "new").
+CROWD_FRESH_YEAR = 2020
 
 
 def world(seed: int = 7) -> dict[str, Any]:
-    """Titles, a user's two lists with hidden tastes, links, custom lists and exclusions."""
+    """Titles, a user's two lists with hidden preferences, links, custom lists and exclusions."""
     rng = random.Random(seed)
-    taste = {t: rng.uniform(-1.5, 1.5) for t in TAGS} | {g: rng.uniform(-1, 1) for g in GENRES}
+    preferences = {t: rng.uniform(-1.5, 1.5) for t in TAGS} | {
+        g: rng.uniform(-1, 1) for g in GENRES
+    }
     media: dict[int, Media] = {}
     for ids, kind in (
         (range(1, 241), MediaType.ANIME),
@@ -114,10 +130,18 @@ def world(seed: int = 7) -> dict[str, Any]:
     for a, b in ((1003, 1070), (1015, 1090), (1027, 1110)):
         _link(media, a, b, "SOURCE", "ADAPTATION")
     _link(media, 200, 53, "SUMMARY", "COMPILATION")
+    # Add-ons AniList lists as prequels by story order: an OVA set before a two-season TV series
+    # (like Attack on Titan's "No Regrets"), and an OVA-only series in two parts. Set without
+    # drawing from `rng`, so the rest of the world stays as it was.
+    for i, fmt in ((236, "OVA"), (237, "TV"), (238, "TV"), (229, "OVA"), (230, "OVA")):
+        media[i].format = fmt
+    _link(media, 236, 237, "SEQUEL", "PREQUEL")
+    _link(media, 237, 238, "SEQUEL", "PREQUEL")
+    _link(media, 229, 230, "SEQUEL", "PREQUEL")
 
     def score(m: Media) -> float:
-        tags = sum(taste[t.name] * t.rank / 100 for t in m.tags)
-        return tags + sum(taste[g] for g in m.genres) + rng.gauss(0, 0.6)
+        tags = sum(preferences[t.name] * t.rank / 100 for t in m.tags)
+        return tags + sum(preferences[g] for g in m.genres) + rng.gauss(0, 0.6)
 
     lists = {
         "ANIME": _list(rng, [media[i] for i in rng.sample(ANIME_LISTED, 95)], score),
@@ -129,9 +153,10 @@ def world(seed: int = 7) -> dict[str, Any]:
             picks = rng.sample(pool, 4) + rng.sample(listed, 1)
             links[i] = [(p, rng.choice([0, 1, 3, 8, 20, 45])) for p in picks]
 
-    # Make the same-type versions above real candidates, so hiding them is tested.
+    # Make the same-type versions and add-on chains above real candidates, so hiding or moving
+    # them is tested.
     for listed, extra in (
-        (ANIME_LISTED, (130, 150, 170, 190, 200)),
+        (ANIME_LISTED, (130, 150, 170, 190, 200, 236, 237, 238, 230)),
         (MANGA_LISTED, (1070, 1090, 1110)),
     ):
         for i in list(listed)[:30]:
@@ -158,9 +183,56 @@ def world(seed: int = 7) -> dict[str, Any]:
     }
 
 
+def crowd_table(w: dict[str, Any]) -> bytes:
+    """A made-up crowd table over the world's anime (its own random numbers, so the world
+    stays as it was): a few links per title, each series start the earliest title of its
+    prequel chain, some titles unknown to one table or the other."""
+    rng = random.Random(11)
+    anime = sorted((m for m in w["media"] if m["type"] == "ANIME"), key=lambda m: m["id"])
+    ids = [m["id"] for m in anime]
+    by_id = {m["id"]: m for m in anime}
+
+    def root(m: dict[str, Any]) -> int:
+        for _ in range(10):
+            prequels = sorted(
+                r["mediaId"]
+                for r in m["relations"]
+                if r["relationType"] == "PREQUEL" and r["mediaId"] in by_id
+            )
+            if not prequels:
+                break
+            m = by_id[prequels[0]]
+        return m["id"]
+
+    n = len(ids)
+    links = []
+    for _ in range(2):
+        w_ = np.zeros((n, n))
+        for i in range(n):
+            for j in rng.sample(range(n), 6):
+                if j != i:
+                    w_[i, j] = round(rng.uniform(-0.3, 1.0), 4)
+        links.append(w_)
+    return crowd.encode(
+        ids,
+        [root(m) for m in anime],
+        [m["year"] or 0 for m in anime],
+        links[0],
+        links[1],
+        k=5,
+        fresh_year=CROWD_FRESH_YEAR,
+        liked_known=[rng.random() > 0.05 for _ in ids],
+        signed_known=[rng.random() > 0.1 for _ in ids],
+    )
+
+
 def expected(w: dict[str, Any]) -> dict[str, Any]:
-    """The lab's offline run of every scenario on a world."""
+    """The lab's offline run of every scenario on a world (scenarios with `crowd` use
+    `crowd_table`)."""
     store = load(w)
+    table_file = Path(tempfile.mkdtemp()) / "crowd.bin"
+    table_file.write_bytes(crowd_table(w))
+    saved, crowd.TABLE = crowd.TABLE, table_file
     out = []
     for s in SCENARIOS:
         kind = MediaType(s["type"])
@@ -169,6 +241,7 @@ def expected(w: dict[str, Any]) -> dict[str, Any]:
             discover=False,
             include_adult=s.get("includeAdult", False),
             filters=_filters(s["filters"]),
+            crowd=s.get("crowd", False),
         )
         result = run(store, None, w["user"], kind, options)
         p = result.profile
@@ -191,6 +264,7 @@ def expected(w: dict[str, Any]) -> dict[str, Any]:
             }
         )
     store.close()
+    crowd.TABLE = saved
     return {"limit": LIMIT, "scenarios": SCENARIOS, "results": out}
 
 
@@ -249,7 +323,7 @@ def _link(media: dict[int, Media], a: int, b: int, forward: str, back: str) -> N
 
 
 def _list(rng: random.Random, titles: list[Media], score) -> list[ListEntry]:
-    """Entries whose scores follow the hidden taste, with every status represented."""
+    """Entries whose scores follow the hidden preferences, with every status represented."""
     out = []
     for m in titles:
         s = score(m)

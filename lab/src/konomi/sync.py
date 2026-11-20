@@ -9,8 +9,8 @@ from konomi.anilist import AniListClient
 from konomi.anilist import queries as q
 from konomi.anilist.parse import parse_list_chunk, parse_media
 from konomi.models import Media, MediaType
+from konomi.preference import examples
 from konomi.store import Store
-from konomi.taste import examples
 
 PER_CHUNK = 500
 PAGE_SIZE = 50

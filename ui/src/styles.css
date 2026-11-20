@@ -1225,7 +1225,7 @@ body {
   color: var(--bad);
 }
 
-/* Taste */
+/* Preferences */
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

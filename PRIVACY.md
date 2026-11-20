@@ -1,12 +1,12 @@
 # Privacy policy
 
-*Last updated: 19 November 2026*
+*Last updated: 20 November 2026*
 
 This policy covers the Konomi.moe browser extension (Chrome, Edge, Brave, Opera, Vivaldi and Firefox) and the Konomi.moe Seanime plugin.
 
 ## The short version
 
-Konomi.moe runs entirely on your device. It has no server of its own, collects no analytics, and never sends your data to the developer or anyone else. It talks to AniList to read your list and look up titles, and to YouTube only when you play a trailer.
+Konomi.moe runs entirely on your device. It has no server of its own, collects no analytics, and never sends your data to the developer or anyone else. It talks to AniList to read your list and look up titles, and to YouTube only when you play a trailer. The Seanime plugin also downloads its recommendation table from GitHub; nothing is sent with that request.
 
 ## What it reads from AniList
 
@@ -29,6 +29,10 @@ Everything is kept in your browser's own storage for the extension, on your devi
 
 None of it leaves your device, except for the AniList requests described here. The Seanime plugin keeps the same kind of data in Seanime's plugin storage on your computer, and uses the AniList account you're signed in to in Seanime.
 
+## The recommendation table
+
+Anime picks also use a table of links between titles ("people who liked this also liked that"), built from about 1.2 million people's public anime lists and shipped with Konomi.moe. It holds only AniList title IDs and the strength of each link: no names, user IDs, lists or scores of anyone. Your own list is matched against it on your device and is never sent anywhere.
+
 ## Which sites it contacts
 
 | Site | Why | When |
@@ -38,6 +42,7 @@ None of it leaves your device, except for the AniList requests described here. T
 | s4.anilist.co | Covers, character pictures and your profile picture | When they're shown |
 | i.ytimg.com | Trailer thumbnails | When a title with a trailer is opened |
 | www.youtube-nocookie.com | YouTube's privacy-enhanced trailer player | Only when you press play on a trailer |
+| raw.githubusercontent.com | Seanime plugin only: downloads the recommendation table (below) from this project's GitHub repository. The browser extension has it built in | The first time you get anime picks; your browser keeps a copy |
 
 Opening a title on AniList, YouTube or Dailymotion opens that site in a new tab, under that site's own privacy policy. So do AniList and YouTube when they're contacted as above.
 

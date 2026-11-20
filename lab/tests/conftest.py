@@ -30,6 +30,15 @@ def no_network(monkeypatch):
     monkeypatch.setattr(httpx.HTTPTransport, "handle_request", refuse)
 
 
+@pytest.fixture(autouse=True)
+def no_crowd_table(monkeypatch, tmp_path):
+    """Runs don't use the shipped crowd table (real AniList IDs could match made-up ones);
+    tests of the crowd's picks give `crowd.TABLE` a made-up table of their own."""
+    from konomi import crowd
+
+    monkeypatch.setattr(crowd, "TABLE", tmp_path / "no-crowd-table.bin")
+
+
 @pytest.fixture
 def store():
     s = Store(":memory:")

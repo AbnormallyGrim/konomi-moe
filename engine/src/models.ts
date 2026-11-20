@@ -109,7 +109,7 @@ export function mediaLabels(m: Media): Set<string> {
 /**
  * Everything a title can be excluded by: its `mediaLabels` plus `country:` and `format:` keys,
  * so whatever can be filtered by can also be excluded. (Kept apart from `mediaLabels`, which
- * the taste model doesn't use for these.)
+ * the preference model doesn't use for these.)
  */
 export function exclusionLabels(m: Media): Set<string> {
   const labels = mediaLabels(m);

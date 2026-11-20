@@ -56,4 +56,9 @@ export interface Host {
   /** Opens a title's trailer in the browser; without it the page opens the link itself. */
   openTrailer?(media: Media, trailer: Trailer): Promise<void>;
   readonly embedsTrailers?: boolean;
+  /**
+   * The crowd table (`engine/assets/crowd.bin`): picks learned from other people's anime lists.
+   * Hosts that ship it return its bytes; without it, ranking works as before.
+   */
+  crowdTable?(): Promise<ArrayBuffer>;
 }

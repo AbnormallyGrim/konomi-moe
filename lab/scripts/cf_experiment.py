@@ -40,8 +40,8 @@ from scipy.sparse.linalg import svds
 from konomi import evaluate as ev
 from konomi.models import MediaType
 from konomi.offline import _open
+from konomi.preference import examples, truth
 from konomi.store import Store
-from konomi.taste import examples, truth
 
 which, data_dir, db_path = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
 DIMS = 64
@@ -141,7 +141,7 @@ store.close()
 
 
 def cf_trainer(vectors: dict[int, np.ndarray]) -> ev.Trainer:
-    """Taste vector = training titles' vectors weighted by their centred targets; a title's
+    """Preference vector = training titles' vectors weighted by their centred targets; a title's
     score is its cosine with that. Titles without a vector score 0 (neutral)."""
 
     def train_fn(fit_on):
@@ -182,7 +182,7 @@ for vec_kind in ("implicit", "explicit"):
     }
     covered_key = [ex for ex in key if ex.media.id in vectors]
     print(f"  owner's graded anime with a vector: {len(covered_key)} of {len(key)}")
-    base = ev.taste(extra=extra)
+    base = ev.preference(extra=extra)
     rows = [
         ("community score only", ev.community()),
         ("current model (baseline)", base),
