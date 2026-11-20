@@ -1,6 +1,6 @@
 /** Builds a preference profile and ranks candidates with it. Mirrors the lab's recommend.py. */
 
-import { type CrowdPicks, ORDER_WEIGHT } from "./crowd.ts";
+import { type CrowdPicks, ORDER_WEIGHT, PAGE } from "./crowd.ts";
 import { blocks, type Exclusions, MAX_CHAIN, type MediaLookup } from "./exclusions.ts";
 import { type ListEntry, type ListStatus, type Media, prequelIds, sequelIds } from "./models.ts";
 import {
@@ -198,7 +198,7 @@ export function candidateSources(
   const add = (id: number, source: string) => sources.set(id, [...(sources.get(id) ?? []), source]);
   for (const [root] of options.crowd?.picks ?? []) {
     const by = profile.media.get(options.crowd?.because.get(root) ?? -1);
-    add(root, by ? `fans of ${by.title} liked it too` : "liked by people with lists like yours");
+    add(root, by ? `fans of ${by.title} liked this too` : "liked by people with lists like yours");
   }
   // Strongest recommendation first, so the card's first source is the best one.
   const ordered = [...links].sort((a, b) => b[2] - a[2] || a[0] - b[0]);
@@ -206,7 +206,10 @@ export function candidateSources(
     const liked = profile.media.get(from);
     if (rating > 0 && liked && profile.likedIds.has(from)) add(to, `liked ${liked.title}`);
   }
-  for (const [id, source] of options.extra ?? []) add(id, source);
+  // An empty source is a candidate with no reason to show (a new release).
+  for (const [id, source] of options.extra ?? [])
+    if (source) add(id, source);
+    else if (!sources.has(id)) sources.set(id, []);
   if (options.includeListed) {
     for (const e of profile.entries) {
       const source = UNFINISHED.get(e.status);
@@ -367,7 +370,12 @@ export function rank(
   return withCrowd(ranked, options.crowd, crowdRank, limit);
 }
 
-/** The list as `RankOptions.crowd` describes it. Ties go to the lower AniList ID. */
+/**
+ * The list as `RankOptions.crowd` describes it, page by page (`PAGE` titles, or `limit` if
+ * smaller): each page takes the next crowd picks (three quarters) and the next new releases (a
+ * quarter), other candidates fill a page only when those run out, and each page is ordered by
+ * score. Ties go to the lower AniList ID.
+ */
 function withCrowd(
   ranked: Recommendation[],
   crowd: CrowdPicks,
@@ -377,24 +385,27 @@ function withCrowd(
   const preference = new Map(ranked.map((r) => [r.media.id, r.score]));
   for (const r of ranked) r.score += ORDER_WEIGHT * (crowd.order.get(r.media.id) ?? 0);
   const fresh = (r: Recommendation) => (r.media.year ?? 0) >= crowd.freshYear;
-  const freshPlaces = Math.floor(limit / 4);
   const rankOf = (r: Recommendation) => crowdRank.get(r.media.id) ?? 0;
+  const byScore = (a: Recommendation, b: Recommendation) =>
+    b.score - a.score || a.media.id - b.media.id;
   const picked = ranked
     .filter((r) => crowdRank.has(r.media.id) && !fresh(r))
-    .sort((a, b) => rankOf(a) - rankOf(b) || a.media.id - b.media.id)
-    .slice(0, limit - freshPlaces);
+    .sort((a, b) => rankOf(a) - rankOf(b) || a.media.id - b.media.id);
   const chosen = new Set(picked.map((r) => r.media.id));
   const pref = (r: Recommendation) => preference.get(r.media.id) ?? 0;
   const added = ranked
     .filter((r) => fresh(r) && !chosen.has(r.media.id))
-    .sort((a, b) => pref(b) - pref(a) || a.media.id - b.media.id)
-    .slice(0, freshPlaces);
+    .sort((a, b) => pref(b) - pref(a) || a.media.id - b.media.id);
   for (const r of added) chosen.add(r.media.id);
-  const rest = ranked
-    .filter((r) => !chosen.has(r.media.id))
-    .sort((a, b) => b.score - a.score || a.media.id - b.media.id)
-    .slice(0, limit - chosen.size);
-  return [...picked, ...added, ...rest].sort(
-    (a, b) => b.score - a.score || a.media.id - b.media.id,
-  );
+  const rest = ranked.filter((r) => !chosen.has(r.media.id)).sort(byScore);
+  const size = Math.min(PAGE, limit);
+  const out: Recommendation[] = [];
+  while (out.length < limit && (picked.length || added.length || rest.length)) {
+    const freshPlaces = Math.floor(size / 4);
+    const page = [...picked.splice(0, size - freshPlaces), ...added.splice(0, freshPlaces)];
+    // A page short of either is filled.
+    for (const queue of [rest, picked, added]) page.push(...queue.splice(0, size - page.length));
+    out.push(...page.sort(byScore));
+  }
+  return out.slice(0, limit);
 }

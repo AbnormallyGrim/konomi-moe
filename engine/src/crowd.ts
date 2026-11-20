@@ -17,8 +17,18 @@ import type { ListEntry } from "./models.ts";
 export const CROWD_VERSION = 1;
 /** Liked titles the table must know before its picks are trusted. */
 export const MIN_LIKED = 3;
-/** Crowd picks offered to ranking (filters may drop some). */
+/** Crowd picks offered to ranking at least (filters may drop some). */
 export const CROWD_CANDIDATES = 60;
+/** The list is built page by page: 15 crowd picks and 5 new releases each. */
+export const PAGE = 20;
+
+/**
+ * Crowd picks to offer for a list of `limit` titles: three quarters of it, plus room for titles
+ * filters or the series rules drop.
+ */
+export function candidatesFor(limit: number): number {
+  return Math.max(CROWD_CANDIDATES, Math.ceil((limit * 3) / 4) + 20);
+}
 /** × the standardised signed score, added to the preference score. */
 export const ORDER_WEIGHT = 0.5;
 
@@ -127,7 +137,11 @@ export interface CrowdPicks {
  * The crowd's view of a user's list, or `null` when the table knows too few of their liked
  * titles to be trusted (then ranking works as before).
  */
-export function crowdPicks(table: CrowdTable, entries: readonly ListEntry[]): CrowdPicks | null {
+export function crowdPicks(
+  table: CrowdTable,
+  entries: readonly ListEntry[],
+  count = CROWD_CANDIDATES,
+): CrowdPicks | null {
   const { liked, disliked } = likedAndDisliked(entries);
   const positions = (ids: number[]) =>
     ids
@@ -170,7 +184,7 @@ export function crowdPicks(table: CrowdTable, entries: readonly ListEntry[]): Cr
   const picks = [...best.entries()]
     .sort((a, b) => b[1][0] - a[1][0] || a[0] - b[0])
     .filter(([root]) => !onList.has(root))
-    .slice(0, CROWD_CANDIDATES)
+    .slice(0, count)
     .map(([root, [s, title]]): [number, number, number] => [root, s, title]);
 
   const because = new Map<number, number>();

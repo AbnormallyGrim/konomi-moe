@@ -103,3 +103,24 @@ def test_without_the_crowd_ranking_is_unchanged(store):
     assert [r.media.id for r in plain] == [
         r.media.id for r in sorted(plain, key=lambda r: r.score, reverse=True)
     ]
+
+
+def test_a_long_list_is_built_page_by_page_so_old_candidates_dont_crowd_the_first(
+    store, monkeypatch
+):
+    from konomi import recommend as rec
+
+    monkeypatch.setattr(rec, "PAGE", 4)  # pages of 4: 3 crowd picks and 1 new release
+    t = table({(1, 10): 0.9, (2, 20): 0.8, (3, 30): 0.7, (3, 40): 0.6})
+    listed = [make_media(i, ["Iyashikei"], year=2010) for i in (1, 2, 3, 4, 5, 6)]
+    crowd_picks = [make_media(i, ["Gore"], year=2010) for i in (10, 20, 30, 40)]
+    new = [make_media(i, ["Gore"], year=2025) for i in (50, 60)]
+    # Titles the preference model loves, found the old way: before, they took the top.
+    old = [make_media(i, ["Iyashikei"], year=2010, average_score=95) for i in (70, 80)]
+    store.upsert_media([*listed, *crowd_picks, *new, *old])
+    profile = build_profile(store, entries(LIST))
+    p = crowd.picks(t, entries(LIST))
+    extra = [(i, "x") for i in (50, 60, 70, 80)]
+    ids = [r.media.id for r in recommend(store, profile, extra, limit=8, crowd=p)]
+    assert set(ids[:4]) == {10, 20, 30, 50}
+    assert set(ids[4:]) == {40, 60, 70, 80}

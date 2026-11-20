@@ -240,6 +240,11 @@ export function App({ host }: { host: Host }) {
     );
   }, [host, start]);
 
+  /** After "Clear all data": open the now empty store, staying where the user is. */
+  const reopen = useCallback(async () => {
+    if (user) setSession(await Session.open(host, user.name));
+  }, [host, user]);
+
   useEffect(() => {
     if (!session || !host.serve) return;
     return host.serve(session, () => setRevision((r) => r + 1));
@@ -269,7 +274,14 @@ export function App({ host }: { host: Host }) {
         <span class="spinner" />
       </div>
     );
-  return <Shell key={revision} session={session} avatarUrl={user?.avatarUrl ?? null} />;
+  return (
+    <Shell
+      key={revision}
+      session={session}
+      avatarUrl={user?.avatarUrl ?? null}
+      onCleared={reopen}
+    />
+  );
 }
 
 function UserAvatar({ name, url }: { name: string; url: string | null }) {
@@ -410,7 +422,15 @@ function Welcome(props: { host: Host; onUser: (user: HostUser, typed: boolean) =
 
 /* Shell */
 
-function Shell({ session, avatarUrl }: { session: Session; avatarUrl: string | null }) {
+function Shell({
+  session,
+  avatarUrl,
+  onCleared,
+}: {
+  session: Session;
+  avatarUrl: string | null;
+  onCleared: () => Promise<void>;
+}) {
   const seanime = session.host.kind === "seanime";
   const [view, setView] = useState<View>("foryou");
   const [kind, setKind] = useState<MediaType>("ANIME");
@@ -452,15 +472,18 @@ function Shell({ session, avatarUrl }: { session: Session; avatarUrl: string | n
   }, [session, saveSettings, view]);
 
   // Once, on the first visit, after For you has finished loading (the first sync can take a
-  // minute, and the tour would only cover the loading screen).
+  // minute, and the tour would only cover the loading screen). Only ever judged on For you, with
+  // the data now open: after "Clear all data" on Settings it waits until For you loads again.
   const [loaded, setLoaded] = useState(false);
   const markLoaded = useCallback(() => setLoaded(true), []);
+  // A new session (data cleared) starts unloaded.
+  useEffect(() => setLoaded(false), [session]);
   const toured = useRef(false);
   useEffect(() => {
-    if (!settings || settings.tourSeen || !loaded || toured.current) return;
+    if (!settings || settings.tourSeen || view !== "foryou" || !loaded || toured.current) return;
     toured.current = true;
     tour();
-  }, [settings, loaded, tour]);
+  }, [settings, view, loaded, tour]);
 
   if (!settings) return null;
   const nav: [View, string][] = [
@@ -539,6 +562,7 @@ function Shell({ session, avatarUrl }: { session: Session; avatarUrl: string | n
             saveSettings={saveSettings}
             toast={toast}
             startTour={tour}
+            onCleared={onCleared}
           />
         )}
       </main>
@@ -2135,6 +2159,7 @@ function SettingsView(props: {
   saveSettings: (s: Settings) => Promise<void>;
   toast: (text: string) => void;
   startTour: () => void;
+  onCleared: () => Promise<void>;
 }) {
   const { session, settings } = props;
   const seanime = session.host.kind === "seanime";
@@ -2245,22 +2270,96 @@ function SettingsView(props: {
               : "Deletes everything stored locally"
           }
         >
-          <button
-            type="button"
-            class="btn"
-            style="color:var(--bad)"
-            onClick={async () => {
-              if (!confirm("Delete all saved picks, settings and exclusions?")) return;
-              await session.clear();
-              props.toast("Cleared. Reloading…");
-              setTimeout(() => location.reload(), 600);
-            }}
-          >
-            Clear
-          </button>
+          <ClearData session={session} toast={props.toast} onCleared={props.onCleared} />
         </Setting>
       </div>
     </section>
+  );
+}
+
+/**
+ * Clear all data, confirmed in a dialog drawn by the page: Seanime's sandboxed frame blocks the
+ * browser's own dialogs (`confirm()` there answers "no" without showing anything). Afterwards the
+ * page stays on Settings with the empty store open.
+ */
+function ClearData(props: {
+  session: Session;
+  toast: (text: string) => void;
+  onCleared: () => Promise<void>;
+}) {
+  const [step, setStep] = useState<"idle" | "confirm" | "clearing">("idle");
+  const seanime = props.session.host.kind === "seanime";
+
+  useEffect(() => {
+    if (step !== "confirm") return;
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setStep("idle");
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [step]);
+
+  const clear = async () => {
+    setStep("clearing");
+    try {
+      await props.session.clear();
+      await props.onCleared();
+      props.toast("All data cleared");
+    } catch (e) {
+      props.toast(`Couldn't clear your data: ${errorText(e)}`);
+    }
+    setStep("idle");
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        class="btn"
+        style="color:var(--bad)"
+        disabled={step === "clearing"}
+        onClick={() => setStep("confirm")}
+      >
+        {step === "clearing" ? "Clearing…" : "Clear"}
+      </button>
+      {step !== "idle" && (
+        <div class="overlay">
+          <div
+            class="overlay-card"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="clear-title"
+          >
+            <h2 id="clear-title">Clear all data?</h2>
+            <p>
+              {seanime
+                ? "Deletes this plugin's saved picks, settings, exclusions and synced lists. Your Seanime sign-in and your AniList account aren't touched."
+                : "Deletes your saved picks, settings, exclusions and synced lists from this browser. Your AniList account isn't touched."}{" "}
+              This can't be undone.
+            </p>
+            <div class="row-gap">
+              <button
+                type="button"
+                class="btn"
+                disabled={step === "clearing"}
+                onClick={() => setStep("idle")}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn"
+                style="color:var(--bad)"
+                disabled={step === "clearing"}
+                onClick={clear}
+                // biome-ignore lint/a11y/noAutofocus: the dialog's main action; Escape and Cancel back out
+                autoFocus
+              >
+                {step === "clearing" ? "Clearing…" : "Clear all data"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

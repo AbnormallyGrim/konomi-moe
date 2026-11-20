@@ -91,7 +91,16 @@ export interface Picks {
   at: number;
   recommendations: Recommendation[];
   warnings: string[];
+  /** Which ranking made them (`RANKING`); missing on picks saved before it was recorded. */
+  ranking?: number;
 }
+
+/**
+ * The ranking's version. Saved picks from another one are dropped on open, so an update to how
+ * picks are made shows at once instead of after the next Apply. 2: picks from other people's
+ * lists, with places for new releases; 3: their reasons reworded.
+ */
+export const RANKING = 3;
 
 /** What the preferences tab shows. */
 export interface Preferences {
@@ -180,7 +189,8 @@ export class Session {
   /** The saved picks for a type, if any. */
   async picks(type: MediaType): Promise<Picks | null> {
     const raw = await this.store.getMeta(`ui-picks:${type}`);
-    return raw ? (JSON.parse(raw) as Picks) : null;
+    const saved = raw ? (JSON.parse(raw) as Picks) : null;
+    return saved?.ranking === RANKING ? saved : null;
   }
 
   /** Run the engine and keep up to `pool` picks; `null` when that list isn't synced yet. */
@@ -190,7 +200,7 @@ export class Session {
     pool = POOL,
   ): Promise<Picks | null> {
     const s = await this.settings();
-    const crowd = type === "ANIME" ? await this.crowdTable(progress) : { table: null };
+    const crowd = type === "ANIME" ? await this.crowdTable() : { table: null };
     let result: RunResult;
     try {
       result = await run(
@@ -215,6 +225,7 @@ export class Session {
       at: Date.now(),
       recommendations: result.recommendations,
       warnings: crowd.error ? [crowd.error, ...result.warnings] : result.warnings,
+      ranking: RANKING,
     };
     await this.store.setMeta(`ui-picks:${type}`, JSON.stringify(picks));
     await this.save();
@@ -222,11 +233,10 @@ export class Session {
   }
 
   /** The host's crowd table, fetched and decoded once a session; never fails a run. */
-  private crowdTable(progress: Progress): Promise<{ table: CrowdTable | null; error?: string }> {
+  private crowdTable(): Promise<{ table: CrowdTable | null; error?: string }> {
     const load = this.host.crowdTable;
     if (!load) return Promise.resolve({ table: null });
     this.crowd ??= (async () => {
-      progress("Loading picks from other people's lists");
       try {
         return { table: parseCrowd(await load.call(this.host)) };
       } catch (e) {
@@ -412,6 +422,10 @@ export class Session {
 
   /** Forget everything for this user (settings, picks, exclusions, cache). */
   async clear(): Promise<void> {
+    // A save still waiting would write the old data back over the empty store.
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    this.save = async () => {}; // nothing more is saved before the page reloads
     await this.host.saveStore(JSON.stringify(new MemoryStore().toJSON()));
   }
 

@@ -2037,3 +2037,10 @@ button.tab.on {
   background: var(--accent-soft);
   font-size: 0.9rem;
 }
+.row-gap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}

@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
-from konomi.crowd import ORDER_WEIGHT, CrowdPicks
+from konomi.crowd import ORDER_WEIGHT, PAGE, CrowdPicks
 from konomi.exclusions import MAX_CHAIN, Exclusions
 from konomi.models import ListEntry, ListStatus, Media
 from konomi.preference import (
@@ -268,7 +268,7 @@ def recommend(
         for root in roots:
             by = profile.media.get(crowd.because.get(root, -1))
             sources[root].append(
-                f"fans of {by.title} liked it too"
+                f"fans of {by.title} liked this too"
                 if by
                 else "liked by people with lists like yours"
             )
@@ -279,7 +279,10 @@ def recommend(
         if rating > 0 and from_id in profile.media:
             sources[to_id].append(f"liked {profile.media[from_id].title}")
     for media_id, source in extra or []:
-        sources[media_id].append(source)
+        if source:
+            sources[media_id].append(source)
+        else:
+            sources[media_id]  # a candidate with no reason to show (a new release)
     if include_listed:
         for media_id, status in statuses.items():
             if status in UNFINISHED:
@@ -326,7 +329,10 @@ def recommend(
 def _with_crowd(
     ranked: list[Recommendation], crowd: CrowdPicks, crowd_rank: dict[int, int], limit: int
 ) -> list[Recommendation]:
-    """The list as `recommend` describes it with `crowd`. Ties go to the lower AniList ID."""
+    """The list as `recommend` describes it with `crowd`, page by page (`PAGE` titles, or
+    `limit` if smaller): each page takes the next crowd picks (three quarters) and the next new
+    releases (a quarter), other candidates fill a page only when those run out, and each page
+    is ordered by score. Ties go to the lower AniList ID."""
     preference = {r.media.id: r.score for r in ranked}
     for r in ranked:
         r.score = preference[r.media.id] + ORDER_WEIGHT * crowd.order.get(r.media.id, 0.0)
@@ -334,21 +340,31 @@ def _with_crowd(
     def fresh(r: Recommendation) -> bool:
         return (r.media.year or 0) >= crowd.fresh_year
 
-    fresh_places = limit // 4
     picked = sorted(
         (r for r in ranked if r.media.id in crowd_rank and not fresh(r)),
         key=lambda r: (crowd_rank[r.media.id], r.media.id),
-    )[: limit - fresh_places]
+    )
     chosen = {r.media.id for r in picked}
     new = sorted(
         (r for r in ranked if fresh(r) and r.media.id not in chosen),
         key=lambda r: (-preference[r.media.id], r.media.id),
-    )[:fresh_places]
+    )
     chosen |= {r.media.id for r in new}
     rest = sorted(
         (r for r in ranked if r.media.id not in chosen), key=lambda r: (-r.score, r.media.id)
-    )[: limit - len(chosen)]
-    return sorted(picked + new + rest, key=lambda r: (-r.score, r.media.id))
+    )
+    size = min(PAGE, limit)
+    out: list[Recommendation] = []
+    while len(out) < limit and (picked or new or rest):
+        fresh_places = size // 4
+        page = picked[: size - fresh_places] + new[:fresh_places]
+        picked, new = picked[size - fresh_places :], new[fresh_places:]
+        for queue in (rest, picked, new):  # a page short of either is filled
+            take = queue[: size - len(page)]
+            page += take
+            del queue[: len(take)]
+        out += sorted(page, key=lambda r: (-r.score, r.media.id))
+    return out[:limit]
 
 
 def _reason(feature: str) -> Reason:

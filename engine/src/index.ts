@@ -30,10 +30,12 @@ export {
   CROWD_VERSION,
   type CrowdPicks,
   type CrowdTable,
+  candidatesFor,
   crowdPicks,
   likedAndDisliked,
   MIN_LIKED,
   ORDER_WEIGHT,
+  PAGE,
   parseCrowd,
 } from "./crowd.ts";
 export {

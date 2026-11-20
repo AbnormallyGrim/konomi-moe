@@ -2,7 +2,7 @@
 
 import { type AniListClient, AniListError } from "./anilist/client.ts";
 import * as q from "./anilist/queries.ts";
-import { type CrowdTable, crowdPicks } from "./crowd.ts";
+import { type CrowdTable, candidatesFor, crowdPicks } from "./crowd.ts";
 import {
   type Exclusions,
   excludedGenres,
@@ -120,7 +120,10 @@ export async function run(
   const { filters } = options;
   const extra: [number, string][] = [];
   const warnings: string[] = [];
-  const picks = type === "ANIME" && options.crowd ? crowdPicks(options.crowd, entries) : null;
+  const picks =
+    type === "ANIME" && options.crowd
+      ? crowdPicks(options.crowd, entries, candidatesFor(options.limit))
+      : null;
 
   let excluded: Exclusions;
   try {
@@ -197,7 +200,7 @@ export async function run(
       if (picks) {
         const page1 = first[tags.length] ?? [];
         const pages = page1.length < 50 ? [page1] : [page1, first[tags.length + 1] ?? []];
-        for (const m of pages.flat()) extra.push([m.id, `new since ${picks.freshYear}`]);
+        for (const m of pages.flat()) extra.push([m.id, ""]); // no reason shown
       }
       const forFilters = (found: Media[]) => {
         for (const m of found) extra.push([m.id, "top-scored for your filters"]);

@@ -73,7 +73,7 @@ def run(
     filters = options.filters
     picks = None
     if media_type is MediaType.ANIME and options.crowd and (table := crowd.load()) is not None:
-        picks = crowd.picks(table, entries)
+        picks = crowd.picks(table, entries, crowd.candidates_for(options.limit))
     try:
         themes = Themes(tag_categories(store, online))
     except AniListError as e:
@@ -101,7 +101,7 @@ def run(
                 since = (picks.fresh_year - 1) * 10000 + 1231
                 fresh = {**base, "startGreater": max(base.get("startGreater") or 0, since)}
                 found = discover(online, store, media_type, fresh, per_page=50, pages=2)
-                extra += [(m.id, f"new since {picks.fresh_year}") for m in found]
+                extra += [(m.id, "") for m in found]  # no reason shown: its card has its own
             if filters.active:
                 progress("Searching AniList with your filters")
                 found = discover(online, store, media_type, base, pages=2)

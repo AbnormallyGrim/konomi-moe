@@ -2,7 +2,7 @@ import type { ListEntry, Media, MediaType } from "@konomi/engine";
 import { describe, expect, it } from "vitest";
 import { fakeClient, node } from "../../engine/test/fake-anilist.ts";
 import type { Host, HostList } from "../src/host.ts";
-import { cleanDescription, displayTitle, POOL, Session } from "../src/session.ts";
+import { cleanDescription, displayTitle, POOL, RANKING, Session } from "../src/session.ts";
 
 const entry = (mediaId: number, status: ListEntry["status"], score = 0): ListEntry => ({
   mediaId,
@@ -94,6 +94,52 @@ describe("Session", () => {
     expect(await again.customListNames("ANIME")).toEqual(["Example"]);
   });
 
+  it("drops saved picks made by an earlier ranking, so an update shows at once", async () => {
+    const { catalog, lists } = world();
+    const { host } = fakeHost(lists);
+    const { client } = fakeClient({ catalog });
+    const session = await Session.open(host, "Someone", client);
+    await session.sync();
+    const picks = await session.recommend("ANIME");
+    expect(picks?.ranking).toBe(RANKING);
+    const older = { ...picks, ranking: undefined };
+    await session.store.setMeta("ui-picks:ANIME", JSON.stringify(older));
+    expect(await session.picks("ANIME")).toBeNull();
+  });
+
+  it("loads the host's crowd table once, and says so when it can't", async () => {
+    const { catalog, lists } = world();
+    const { host } = fakeHost(lists);
+    let asked = 0;
+    host.crowdTable = async () => {
+      asked++;
+      throw new Error("offline");
+    };
+    const { client } = fakeClient({ catalog });
+    const session = await Session.open(host, "Someone", client);
+    await session.sync();
+    const picks = await session.recommend("ANIME");
+    expect(picks?.warnings[0]).toContain("picks from other people's lists unavailable: offline");
+    expect(picks?.recommendations.length).toBeGreaterThan(0); // ranked the earlier way
+    await session.recommend("MANGA");
+    expect(asked).toBe(1); // manga never asks
+  });
+
+  it("clears everything, and a save still waiting doesn't bring the old data back", async () => {
+    const { catalog, lists } = world();
+    const { host } = fakeHost(lists);
+    const { client } = fakeClient({ catalog });
+    const session = await Session.open(host, "Someone", client);
+    await session.sync();
+    await session.recommend("ANIME");
+    void session.save(); // queued, not yet written
+    await session.clear();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const after = await Session.open(host, "Someone", client);
+    expect(await after.picks("ANIME")).toBeNull();
+    expect(await after.lastSynced()).toBeNull();
+  });
+
   it("keeps settings per type and exclusions without repeats", async () => {
     const { host } = fakeHost(world().lists);
     const session = await Session.open(host, "Someone", fakeClient({}).client);
@@ -160,7 +206,8 @@ describe("stats per list", () => {
     const { host } = fakeHost(lists);
     const session = await Session.open(host, "Someone", fakeClient({ catalog }).client);
     await session.sync();
-    const keys = async (t: MediaType) => (await session.preferencesFor(t))?.likes.map(([k]) => k) ?? [];
+    const keys = async (t: MediaType) =>
+      (await session.preferencesFor(t))?.likes.map(([k]) => k) ?? [];
     const anime = await keys("ANIME");
     const mangaLikes = await keys("MANGA");
     expect(anime).toContain("tag:Iyashikei");

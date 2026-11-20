@@ -30,7 +30,8 @@ TABLE = Path(__file__).resolve().parents[3] / "engine" / "assets" / "crowd.bin"
 MAGIC = b"KCRW"
 VERSION = 1
 MIN_LIKED = 3  # liked titles the table must know before its picks are trusted
-CANDIDATES = 60  # crowd picks offered to ranking (filters may drop some)
+CANDIDATES = 60  # crowd picks offered to ranking at least (filters may drop some)
+PAGE = 20  # the list is built page by page: 15 crowd picks and 5 new releases each
 ORDER_WEIGHT = 0.5  # × the standardised signed score, added to the preference score
 
 
@@ -132,7 +133,15 @@ class CrowdPicks:
     because: dict[int, int]  # series start's ID → the liked title that pulled it up most
 
 
-def picks(table: CrowdTable, entries: list[ListEntry]) -> CrowdPicks | None:
+def candidates_for(limit: int) -> int:
+    """Crowd picks to offer for a list of `limit` titles: three quarters of it, plus room for
+    titles filters or the series rules drop."""
+    return max(CANDIDATES, -(-limit * 3 // 4) + 20)
+
+
+def picks(
+    table: CrowdTable, entries: list[ListEntry], count: int = CANDIDATES
+) -> CrowdPicks | None:
     """The crowd's view of a user's list, or None when the table knows too few of their liked
     titles to be trusted (then ranking works as before)."""
     liked, disliked = liked_and_disliked(entries)
@@ -168,7 +177,7 @@ def picks(table: CrowdTable, entries: list[ListEntry]) -> CrowdPicks | None:
             best[root] = (s, int(table.ids[p]))
     ranked = sorted(best.items(), key=lambda kv: (-kv[1][0], kv[0]))
     on_list = {e.media_id for e in entries}
-    chosen = [(r, s, t) for r, (s, t) in ranked if r not in on_list][:CANDIDATES]
+    chosen = [(r, s, t) for r, (s, t) in ranked if r not in on_list][:count]
 
     because: dict[int, int] = {}
     for root, _, title in chosen:
