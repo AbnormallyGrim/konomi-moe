@@ -160,7 +160,8 @@ describe("stats per list", () => {
     const { host } = fakeHost(lists);
     const session = await Session.open(host, "Someone", fakeClient({ catalog }).client);
     await session.sync();
-    const keys = async (t: MediaType) => (await session.preferencesFor(t))?.likes.map(([k]) => k) ?? [];
+    const keys = async (t: MediaType) =>
+      (await session.preferencesFor(t))?.likes.map(([k]) => k) ?? [];
     const anime = await keys("ANIME");
     const mangaLikes = await keys("MANGA");
     expect(anime).toContain("tag:Iyashikei");
