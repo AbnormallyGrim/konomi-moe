@@ -1,7 +1,7 @@
 {
   "id": "konomi-moe",
   "name": "Konomi.moe",
-  "version": "0.2.1",
+  "version": "0.3.6",
   "semverConstraint": ">=3.10.4",
   "manifestURI": "https://raw.githubusercontent.com/AbnormallyGrim/konomi-moe/refs/heads/main/seanime/release/konomi-moe.json",
   "language": "javascript",
@@ -20,5 +20,5 @@
       ]
     }
   },
-  "payloadURI": "https://raw.githubusercontent.com/AbnormallyGrim/konomi-moe/refs/heads/main/seanime/release/konomi-moe-0.2.1.js"
+  "payloadURI": "https://raw.githubusercontent.com/AbnormallyGrim/konomi-moe/refs/heads/main/seanime/release/konomi-moe-0.3.6.js"
 }
