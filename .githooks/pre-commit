@@ -1,0 +1,8 @@
+#!/bin/sh
+# Refuse commits directly on main. Work on a branch and open a PR.
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ "$branch" = "main" ]; then
+  echo "pre-commit: committing directly on 'main' is not allowed." >&2
+  echo "Create a branch first:  git switch -c <branch-name>" >&2
+  exit 1
+fi

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Refuse pushes that update main on the remote. Merge via a PR instead.
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "pre-push: pushing directly to 'main' is not allowed. Open a PR instead." >&2
+    exit 1
+  fi
+done
+exit 0
